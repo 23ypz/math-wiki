@@ -116,3 +116,40 @@ button.ghost {
   .grid-4, .grid-2, .form-row { grid-template-columns: 1fr; }
   .main { padding: 18px; }
 }
+
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.card-head h3 { margin: 0; }
+.large-textarea { min-height: 160px; }
+.compact-filter { width: min(760px, 100%); grid-template-columns: 1.2fr .8fr auto; align-items: end; }
+.markdown-body {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fbfdff;
+  padding: 14px 16px;
+  min-height: 120px;
+  line-height: 1.85;
+  color: #1f2937;
+  overflow-wrap: anywhere;
+}
+.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 { margin: 10px 0 8px; color: #0f172a; }
+.markdown-body h1 { font-size: 22px; }
+.markdown-body h2 { font-size: 19px; }
+.markdown-body h3 { font-size: 17px; }
+.markdown-body p { margin: 8px 0; }
+.markdown-body ul { margin: 8px 0; padding-left: 22px; }
+.markdown-body code { background: #eef2ff; color: #3730a3; padding: 2px 5px; border-radius: 6px; }
+.formula-block { display: block; padding: 10px 12px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; overflow-x: auto; }
+.tip { color: #065f46; background: #d1fae5; border-radius: 10px; padding: 10px 12px; }
+.muted { color: var(--muted); }
+.bar-row { display: grid; gap: 8px; margin: 14px 0; }
+.bar-label { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; }
+.bar { height: 12px; border-radius: 999px; overflow: hidden; background: #eef2ff; }
+.bar span { display: block; height: 100%; background: linear-gradient(90deg, #60a5fa, #2563eb); border-radius: 999px; }
+.mini-progress { width: 92px; height: 8px; border-radius: 999px; background: #eef2ff; overflow: hidden; margin-bottom: 4px; }
+.mini-progress span { display: block; height: 100%; background: #2563eb; }
+button:disabled { opacity: .6; cursor: not-allowed; }
+
+@media (max-width: 900px) {
+  .compact-filter { grid-template-columns: 1fr; }
+  .page-title { align-items: flex-start; flex-direction: column; }
+}

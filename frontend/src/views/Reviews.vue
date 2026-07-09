@@ -13,13 +13,28 @@ function addDays(days: number) {
   return d.toISOString().slice(0, 10);
 }
 
+function applyInterval(id: number) {
+  const data = form[id];
+  if (!data) return;
+  if (data.result === '完全会了') {
+    data.status = '已掌握';
+    data.next_review_date = '';
+  } else if (data.result === '还有点卡') {
+    data.status = '复习中';
+    data.next_review_date = addDays(7);
+  } else {
+    data.status = '待复习';
+    data.next_review_date = addDays(3);
+  }
+}
+
 async function load() {
   error.value = '';
   try {
     const res = await request<{ items: Mistake[] }>('/reviews/today');
     items.value = res.items;
     for (const item of items.value) {
-      form[item.id] = form[item.id] || { result: '还有点卡', note: '', next_review_date: addDays(3), status: '复习中' };
+      form[item.id] = form[item.id] || { result: '还有点卡', note: '', next_review_date: addDays(7), status: '复习中' };
     }
   } catch (e) {
     error.value = e instanceof Error ? e.message : '加载失败';
@@ -61,9 +76,10 @@ onMounted(load);
         <p><span class="badge">{{ item.subject }}</span> {{ item.chapter }} · 下次复习原定 {{ item.next_review_date }}</p>
         <p><strong>错因：</strong>{{ item.wrong_reason || '未填写' }}</p>
         <p><strong>总结：</strong>{{ item.summary || '未填写' }}</p>
+        <p class="tip">建议：还是不会 3 天后再复习；还有点卡 7 天后再复习；完全会了则标记已掌握。</p>
         <div class="form-row">
           <label>复习结果
-            <select v-model="form[item.id].result">
+            <select v-model="form[item.id].result" @change="applyInterval(item.id)">
               <option>完全会了</option><option>还有点卡</option><option>还是不会</option>
             </select>
           </label>

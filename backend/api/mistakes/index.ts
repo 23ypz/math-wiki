@@ -8,6 +8,8 @@ type Mistake = {
   title: string;
   subject: string;
   chapter: string | null;
+  knowledge_point_id: number | null;
+  knowledge_title: string | null;
   source: string | null;
   question_text: string | null;
   answer_text: string | null;
@@ -31,22 +33,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const subject = one(req.query.subject);
       const status = one(req.query.status);
       const q = one(req.query.q);
-      const params: unknown[] = [user.userId];
-      let sql = 'SELECT * FROM mistakes WHERE user_id = ?';
+      const params: any[] = [user.userId];
+      let sql = `SELECT m.*, kp.title AS knowledge_title
+                 FROM mistakes m
+                 LEFT JOIN knowledge_points kp ON kp.id = m.knowledge_point_id AND kp.user_id = m.user_id
+                 WHERE m.user_id = ?`;
 
       if (subject) {
-        sql += ' AND subject = ?';
+        sql += ' AND m.subject = ?';
         params.push(subject);
       }
       if (status) {
-        sql += ' AND status = ?';
+        sql += ' AND m.status = ?';
         params.push(status);
       }
       if (q) {
-        sql += ' AND (title LIKE ? OR chapter LIKE ? OR source LIKE ? OR question_text LIKE ? OR summary LIKE ?)';
-        params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
+        sql += ' AND (m.title LIKE ? OR m.chapter LIKE ? OR m.source LIKE ? OR m.question_text LIKE ? OR m.summary LIKE ? OR kp.title LIKE ?)';
+        params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
       }
-      sql += ' ORDER BY COALESCE(next_review_date, DATE(\'2999-12-31\')) ASC, id DESC LIMIT 200';
+      sql += ' ORDER BY COALESCE(m.next_review_date, DATE(\'2999-12-31\')) ASC, m.id DESC LIMIT 200';
       return ok(res, { items: await rows<Mistake>(sql, params) });
     }
 

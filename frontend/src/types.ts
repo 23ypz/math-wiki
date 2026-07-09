@@ -17,6 +17,7 @@ export type Mistake = {
   subject: string;
   chapter: string;
   knowledge_point_id?: number | null;
+  knowledge_title?: string | null;
   source: string;
   question_text: string;
   answer_text: string;

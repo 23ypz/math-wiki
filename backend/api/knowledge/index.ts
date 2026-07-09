@@ -23,7 +23,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'GET') {
       const subject = one(req.query.subject);
       const q = one(req.query.q);
-      const params: unknown[] = [user.userId];
+      const params: any[] = [user.userId];
       let sql = 'SELECT * FROM knowledge_points WHERE user_id = ?';
       if (subject) {
         sql += ' AND subject = ?';

@@ -12,7 +12,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'GET') {
       const from = one(req.query.from);
       const to = one(req.query.to);
-      const params: unknown[] = [user.userId];
+      const params: any[] = [user.userId];
       let sql = 'SELECT * FROM study_logs WHERE user_id = ?';
       if (from) {
         sql += ' AND study_date >= ?';
