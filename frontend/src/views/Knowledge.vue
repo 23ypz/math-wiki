@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { request } from '../api';
-import { renderMarkdown } from '../markdown';
+import { renderMarkdown, typesetMath } from '../markdown';
 import type { KnowledgePoint } from '../types';
 
 const items = ref<KnowledgePoint[]>([]);
@@ -67,7 +67,15 @@ async function remove(id: number) {
   }
 }
 
-onMounted(load);
+watch([previewHtml, showPreview], () => {
+  nextTick(typesetMath);
+}, { flush: 'post' });
+
+onMounted(async () => {
+  await load();
+  await nextTick();
+  typesetMath();
+});
 </script>
 
 <template>
@@ -108,7 +116,7 @@ onMounted(load);
 
       <div class="card">
         <h3>{{ showPreview ? '实时预览' : '筛选' }}</h3>
-        <div v-if="showPreview" class="markdown-body" v-html="previewHtml"></div>
+        <div v-if="showPreview" class="markdown-body preview-scroll" v-html="previewHtml"></div>
         <template v-else>
           <div class="form-row">
             <input v-model="filter.q" placeholder="搜索标题/章节/内容" @keyup.enter="load" />

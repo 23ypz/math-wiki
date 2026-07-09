@@ -7,63 +7,237 @@ function escapeHtml(value: string) {
     .replace(/'/g, '&#039;');
 }
 
-function inlineMarkdown(value: string) {
-  return value
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
+function renderInline(value: string) {
+  let html = escapeHtml(value);
+
+  // Inline code first, so markdown syntax inside code is not interpreted.
+  const codeStore: string[] = [];
+  html = html.replace(/`([^`]+)`/g, (_match, code) => {
+    const token = `@@CODE_${codeStore.length}@@`;
+    codeStore.push(`<code>${code}</code>`);
+    return token;
+  });
+
+  // Links: [text](https://example.com)
+  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+
+  // MathJax inline math. Do this before emphasis so * inside TeX is not touched.
+  html = html.replace(/\$(?!\$)([^$\n]+?)\$/g, '<span class="math-inline">\\($1\\)</span>');
+
+  html = html
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    .replace(/__([^_]+)__/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    .replace(/_([^_]+)_/g, '<em>$1</em>');
+
+  codeStore.forEach((code, index) => {
+    html = html.replace(`@@CODE_${index}@@`, code);
+  });
+
+  return html;
+}
+
+function renderTable(rows: string[]) {
+  const parseRow = (row: string) => row.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((cell) => cell.trim());
+  const header = parseRow(rows[0]);
+  const bodyRows = rows.slice(2).map(parseRow);
+
+  const thead = `<thead><tr>${header.map((cell) => `<th>${renderInline(cell)}</th>`).join('')}</tr></thead>`;
+  const tbody = `<tbody>${bodyRows.map((row) => `<tr>${row.map((cell) => `<td>${renderInline(cell)}</td>`).join('')}</tr>`).join('')}</tbody>`;
+  return `<div class="table-wrap"><table>${thead}${tbody}</table></div>`;
+}
+
+function isTableStart(lines: string[], index: number) {
+  const first = lines[index]?.trim();
+  const second = lines[index + 1]?.trim();
+  return Boolean(
+    first?.includes('|') &&
+    second &&
+    /^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?$/.test(second)
+  );
+}
+
+let mathTimer: number | undefined;
+
+export function typesetMath() {
+  if (typeof window === 'undefined') return;
+  window.clearTimeout(mathTimer);
+  mathTimer = window.setTimeout(() => {
+    const mathJax = (window as any).MathJax;
+    if (mathJax?.typesetPromise) {
+      mathJax.typesetPromise().catch(() => undefined);
+    }
+  }, 80);
 }
 
 export function renderMarkdown(source?: string | null): string {
   const text = (source || '').trim();
   if (!text) return '<p class="muted">暂无内容</p>';
 
-  const lines = escapeHtml(text).split(/\r?\n/);
+  const lines = text.split(/\r?\n/);
   const html: string[] = [];
-  let inList = false;
+  let inUl = false;
+  let inOl = false;
+  let inBlockQuote = false;
 
-  const closeList = () => {
-    if (inList) {
+  const closeUl = () => {
+    if (inUl) {
       html.push('</ul>');
-      inList = false;
+      inUl = false;
     }
   };
+  const closeOl = () => {
+    if (inOl) {
+      html.push('</ol>');
+      inOl = false;
+    }
+  };
+  const closeBlockQuote = () => {
+    if (inBlockQuote) {
+      html.push('</blockquote>');
+      inBlockQuote = false;
+    }
+  };
+  const closeBlocks = () => {
+    closeUl();
+    closeOl();
+    closeBlockQuote();
+  };
 
-  for (const rawLine of lines) {
+  let i = 0;
+  while (i < lines.length) {
+    const rawLine = lines[i];
     const line = rawLine.trim();
+
     if (!line) {
-      closeList();
+      closeBlocks();
+      i += 1;
       continue;
     }
 
-    if (line.startsWith('$$') && line.endsWith('$$')) {
-      closeList();
-      html.push(`<div class="formula-block">${line}</div>`);
+    if (/^---+$/.test(line) || /^\*\*\*+$/.test(line)) {
+      closeBlocks();
+      html.push('<hr>');
+      i += 1;
       continue;
     }
 
-    const heading = line.match(/^(#{1,4})\s+(.+)$/);
+    if (line.startsWith('```')) {
+      closeBlocks();
+      const lang = line.slice(3).trim();
+      const code: string[] = [];
+      i += 1;
+      while (i < lines.length && !lines[i].trim().startsWith('```')) {
+        code.push(lines[i]);
+        i += 1;
+      }
+      if (i < lines.length) i += 1;
+      html.push(`<pre><code class="language-${escapeHtml(lang)}">${escapeHtml(code.join('\n'))}</code></pre>`);
+      continue;
+    }
+
+    if (line === '$$') {
+      closeBlocks();
+      const formula: string[] = [];
+      i += 1;
+      while (i < lines.length && lines[i].trim() !== '$$') {
+        formula.push(lines[i]);
+        i += 1;
+      }
+      if (i < lines.length) i += 1;
+      html.push(`<div class="math-block">\\[${escapeHtml(formula.join('\n'))}\\]</div>`);
+      continue;
+    }
+
+    if (line.startsWith('$$') && line.endsWith('$$') && line.length > 4) {
+      closeBlocks();
+      const formula = line.slice(2, -2).trim();
+      html.push(`<div class="math-block">\\[${escapeHtml(formula)}\\]</div>`);
+      i += 1;
+      continue;
+    }
+
+    if (isTableStart(lines, i)) {
+      closeBlocks();
+      const tableRows: string[] = [];
+      tableRows.push(lines[i]);
+      tableRows.push(lines[i + 1]);
+      i += 2;
+      while (i < lines.length && lines[i].trim().includes('|') && lines[i].trim()) {
+        tableRows.push(lines[i]);
+        i += 1;
+      }
+      html.push(renderTable(tableRows));
+      continue;
+    }
+
+    const heading = line.match(/^(#{1,6})\s+(.+)$/);
     if (heading) {
-      closeList();
-      const level = heading[1].length;
-      html.push(`<h${level}>${inlineMarkdown(heading[2])}</h${level}>`);
+      closeBlocks();
+      const level = Math.min(6, heading[1].length);
+      html.push(`<h${level}>${renderInline(heading[2])}</h${level}>`);
+      i += 1;
+      continue;
+    }
+
+    const quote = line.match(/^>\s?(.+)$/);
+    if (quote) {
+      closeUl();
+      closeOl();
+      if (!inBlockQuote) {
+        html.push('<blockquote>');
+        inBlockQuote = true;
+      }
+      html.push(`<p>${renderInline(quote[1])}</p>`);
+      i += 1;
+      continue;
+    }
+
+    const checkItem = line.match(/^[-*+]\s+\[([ xX])\]\s+(.+)$/);
+    if (checkItem) {
+      closeOl();
+      closeBlockQuote();
+      if (!inUl) {
+        html.push('<ul class="task-list">');
+        inUl = true;
+      }
+      const checked = checkItem[1].toLowerCase() === 'x' ? ' checked' : '';
+      html.push(`<li class="task-list-item"><input type="checkbox" disabled${checked}> ${renderInline(checkItem[2])}</li>`);
+      i += 1;
       continue;
     }
 
     const listItem = line.match(/^[-*+]\s+(.+)$/);
     if (listItem) {
-      if (!inList) {
+      closeOl();
+      closeBlockQuote();
+      if (!inUl) {
         html.push('<ul>');
-        inList = true;
+        inUl = true;
       }
-      html.push(`<li>${inlineMarkdown(listItem[1])}</li>`);
+      html.push(`<li>${renderInline(listItem[1])}</li>`);
+      i += 1;
       continue;
     }
 
-    closeList();
-    html.push(`<p>${inlineMarkdown(line)}</p>`);
+    const orderedItem = line.match(/^\d+\.\s+(.+)$/);
+    if (orderedItem) {
+      closeUl();
+      closeBlockQuote();
+      if (!inOl) {
+        html.push('<ol>');
+        inOl = true;
+      }
+      html.push(`<li>${renderInline(orderedItem[1])}</li>`);
+      i += 1;
+      continue;
+    }
+
+    closeBlocks();
+    html.push(`<p>${renderInline(line)}</p>`);
+    i += 1;
   }
 
-  closeList();
+  closeBlocks();
   return html.join('\n');
 }

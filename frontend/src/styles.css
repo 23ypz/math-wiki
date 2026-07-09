@@ -153,3 +153,81 @@ button:disabled { opacity: .6; cursor: not-allowed; }
   .compact-filter { grid-template-columns: 1fr; }
   .page-title { align-items: flex-start; flex-direction: column; }
 }
+
+/* v3 Markdown preview enhancements */
+.preview-scroll {
+  max-height: 560px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+  scrollbar-gutter: stable;
+}
+.preview-scroll::-webkit-scrollbar { width: 8px; }
+.preview-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+.preview-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 999px; }
+.markdown-body { white-space: normal; }
+.markdown-body .math-block {
+  margin: 12px 0;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  overflow-x: auto;
+}
+.markdown-body .math-inline { white-space: nowrap; }
+.markdown-body blockquote {
+  margin: 12px 0;
+  padding: 8px 12px;
+  border-left: 4px solid #93c5fd;
+  background: #eff6ff;
+  color: #1e3a8a;
+  border-radius: 8px;
+}
+.markdown-body blockquote p { margin: 4px 0; }
+.markdown-body hr {
+  border: none;
+  border-top: 1px solid #e2e8f0;
+  margin: 16px 0;
+}
+.markdown-body pre {
+  margin: 12px 0;
+  padding: 12px 14px;
+  background: #0f172a;
+  color: #e5e7eb;
+  border-radius: 12px;
+  overflow-x: auto;
+  line-height: 1.65;
+}
+.markdown-body pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+}
+.markdown-body .table-wrap {
+  overflow-x: auto;
+  margin: 12px 0;
+}
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid #e2e8f0;
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+.markdown-body th { background: #f8fafc; color: #0f172a; }
+.markdown-body ol { margin: 8px 0; padding-left: 24px; }
+.markdown-body .task-list { list-style: none; padding-left: 0; }
+.markdown-body .task-list-item { display: flex; gap: 8px; align-items: center; }
+.markdown-body a { color: #2563eb; text-decoration: none; }
+.markdown-body a:hover { text-decoration: underline; }
+mjx-container[display="true"] {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+}

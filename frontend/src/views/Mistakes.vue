@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { request } from '../api';
-import { renderMarkdown } from '../markdown';
+import { renderMarkdown, typesetMath } from '../markdown';
 import type { KnowledgePoint, Mistake } from '../types';
 
 const items = ref<Mistake[]>([]);
@@ -35,6 +35,10 @@ watch(() => form.subject, () => {
     form.knowledge_point_id = '';
   }
 });
+
+watch([questionPreview, answerPreview, summaryPreview], () => {
+  nextTick(typesetMath);
+}, { flush: 'post' });
 
 function reset() {
   editingId.value = null;
@@ -113,6 +117,8 @@ async function remove(id: number) {
 
 onMounted(async () => {
   await Promise.all([loadKnowledge(), load()]);
+  await nextTick();
+  typesetMath();
 });
 </script>
 
@@ -162,6 +168,7 @@ onMounted(async () => {
 
       <div class="card">
         <h3>错题预览</h3>
+        <div class="preview-scroll">
         <p v-if="selectedKnowledge" class="tip">已关联：{{ selectedKnowledge.subject }} / {{ selectedKnowledge.chapter }} / {{ selectedKnowledge.title }}</p>
         <h4>题目</h4>
         <div class="markdown-body" v-html="questionPreview"></div>
@@ -169,6 +176,7 @@ onMounted(async () => {
         <div class="markdown-body" v-html="answerPreview"></div>
         <h4>错因与总结</h4>
         <div class="markdown-body" v-html="summaryPreview"></div>
+        </div>
       </div>
     </div>
 

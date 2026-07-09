@@ -235,3 +235,11 @@ VITE_API_BASE_URL=https://你的-vercel-domain.vercel.app/api
 - 如果新增后端接口，建议把多个功能合并到同一个 API 文件里，避免超过 Vercel Hobby 限制。
 - 数据保存在 TiDB Cloud。更新 GitHub 前端和 Vercel 后端不会删除已有数据。
 - 如果修改了 Vercel 环境变量，需要重新 Redeploy 后端。
+
+
+## v3 更新说明
+
+- 修复 Markdown 预览中 `$$...$$` 多行公式无法渲染的问题。
+- 通过 MathJax 支持行内公式 `$...$` 与块级公式 `$$...$$`。
+- 增强表格、代码块、引用、有序列表、任务清单、分割线、链接等 Markdown 语法预览。
+- 知识点和错题预览区域改为固定高度，可用鼠标滚轮上下滚动，避免页面被长预览撑得过长。
