@@ -15,25 +15,23 @@ const loading = ref(false);
 const currentId = computed(() => Number(route.params.id));
 const contentHtml = computed(() => renderMarkdown(item.value?.content_md || ''));
 const headings = computed(() => extractHeadings(item.value?.content_md || '').filter((h) => h.level <= 3));
+const currentSubject = computed(() => item.value?.subject || '未分类');
+const currentChapter = computed(() => item.value?.chapter || '未分章节');
 
-const groupedItems = computed(() => {
-  const groups = new Map<string, Map<string, KnowledgePoint[]>>();
-  items.value.forEach((point) => {
-    const subject = point.subject || '未分类科目';
+const subjectItems = computed(() => items.value.filter((point) => (point.subject || '未分类') === currentSubject.value));
+const chapters = computed(() => {
+  const chapterMap = new Map<string, number>();
+  subjectItems.value.forEach((point) => {
     const chapter = point.chapter || '未分章节';
-    if (!groups.has(subject)) groups.set(subject, new Map());
-    const chapterMap = groups.get(subject)!;
-    if (!chapterMap.has(chapter)) chapterMap.set(chapter, []);
-    chapterMap.get(chapter)!.push(point);
+    chapterMap.set(chapter, (chapterMap.get(chapter) || 0) + 1);
   });
-  return Array.from(groups.entries()).map(([subject, chapterMap]) => ({
-    subject,
-    chapters: Array.from(chapterMap.entries()).map(([chapter, points]) => ({
-      chapter,
-      points
-    }))
-  }));
+  return Array.from(chapterMap.entries()).map(([chapter, count]) => ({ chapter, count }));
 });
+const chapterItems = computed(() => subjectItems.value.filter((point) => (point.chapter || '未分章节') === currentChapter.value));
+
+function chapterRoute(chapter: string) {
+  return `/knowledge/subject/${encodeURIComponent(currentSubject.value)}/chapter/${encodeURIComponent(chapter)}`;
+}
 
 async function loadList() {
   const res = await request<{ items: KnowledgePoint[] }>('/knowledge');
@@ -84,10 +82,10 @@ onMounted(loadDetail);
       <div>
         <h2>{{ item?.title || '知识点内容' }}</h2>
         <p v-if="item">{{ item.subject }} / {{ item.chapter || '未分章节' }}</p>
-        <p v-else>按知识点查看完整 Markdown 内容、公式和表格。</p>
+        <p v-else>按科目、章节、小知识点逐级阅读。</p>
       </div>
       <div class="actions" v-if="item">
-        <button class="secondary" type="button" @click="router.push('/knowledge')">返回列表</button>
+        <RouterLink class="link-button secondary-link" :to="chapterRoute(currentChapter)">返回本章</RouterLink>
         <button class="primary" type="button" @click="editCurrent">编辑</button>
       </div>
     </div>
@@ -95,50 +93,63 @@ onMounted(loadDetail);
     <p v-if="error" class="error">{{ error }}</p>
     <p v-if="loading" class="muted">正在加载...</p>
 
-    <div class="wiki-layout" v-if="item">
-      <aside class="wiki-left card">
-        <h3>知识点导航</h3>
-        <div class="wiki-nav-scroll">
-          <div v-for="group in groupedItems" :key="group.subject" class="wiki-nav-group">
-            <div class="wiki-nav-subject">{{ group.subject }}</div>
-            <div v-for="chapter in group.chapters" :key="`${group.subject}-${chapter.chapter}`" class="wiki-nav-chapter">
-              <div class="wiki-nav-chapter-title">{{ chapter.chapter }}</div>
-              <RouterLink
-                v-for="point in chapter.points"
-                :key="point.id"
-                :to="`/knowledge/${point.id}`"
-                class="wiki-nav-link"
-                :class="{ active: point.id === item.id }"
+    <div v-if="item" class="subject-layout">
+      <div class="chapter-tabs card" v-if="chapters.length">
+        <RouterLink
+          v-for="chapter in chapters"
+          :key="chapter.chapter"
+          :to="chapterRoute(chapter.chapter)"
+          class="chapter-tab"
+          :class="{ active: chapter.chapter === currentChapter }"
+        >
+          <span>{{ chapter.chapter }}</span>
+          <small>{{ chapter.count }}</small>
+        </RouterLink>
+      </div>
+
+      <div class="wiki-layout subject-main-layout">
+        <aside class="wiki-left card">
+          <h3>小知识点目录</h3>
+          <p class="muted small-text">{{ currentSubject }} / {{ currentChapter }}</p>
+          <div class="point-list-scroll" v-if="chapterItems.length">
+            <RouterLink
+              v-for="point in chapterItems"
+              :key="point.id"
+              :to="`/knowledge/${point.id}`"
+              class="point-list-link"
+              :class="{ active: point.id === item.id }"
+            >
+              <strong>{{ point.title }}</strong>
+              <small>掌握程度 {{ point.mastery_level }}/5</small>
+            </RouterLink>
+          </div>
+
+          <div v-if="headings.length" class="page-toc">
+            <h3>本文目录</h3>
+            <div class="toc-scroll">
+              <button
+                v-for="heading in headings"
+                :key="heading.id"
+                class="toc-link"
+                :class="`toc-level-${heading.level}`"
+                type="button"
+                @click="jumpToHeading(heading.id)"
               >
-                {{ point.title }}
-              </RouterLink>
+                {{ heading.text }}
+              </button>
             </div>
           </div>
-        </div>
+        </aside>
 
-        <div v-if="headings.length" class="page-toc">
-          <h3>本文目录</h3>
-          <button
-            v-for="heading in headings"
-            :key="heading.id"
-            class="toc-link"
-            :class="`toc-level-${heading.level}`"
-            type="button"
-            @click="jumpToHeading(heading.id)"
-          >
-            {{ heading.text }}
-          </button>
-        </div>
-      </aside>
-
-      <article class="wiki-content card">
-        <div class="knowledge-meta">
-          <span class="badge">{{ item.subject }}</span>
-          <span class="badge soft">{{ item.chapter || '未分章节' }}</span>
-          <span class="muted">掌握程度 {{ item.mastery_level }}/5</span>
-        </div>
-        <div class="markdown-body wiki-markdown" v-html="contentHtml"></div>
-      </article>
+        <article class="wiki-content card">
+          <div class="knowledge-meta">
+            <span class="badge">{{ item.subject }}</span>
+            <span class="badge soft">{{ item.chapter || '未分章节' }}</span>
+            <span class="muted">掌握程度 {{ item.mastery_level }}/5</span>
+          </div>
+          <div class="markdown-body wiki-markdown" v-html="contentHtml"></div>
+        </article>
+      </div>
     </div>
   </section>
 </template>

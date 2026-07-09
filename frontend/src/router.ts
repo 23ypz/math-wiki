@@ -2,6 +2,7 @@ import { createRouter, createWebHashHistory } from 'vue-router';
 import Dashboard from './views/Dashboard.vue';
 import Login from './views/Login.vue';
 import Knowledge from './views/Knowledge.vue';
+import KnowledgeSubject from './views/KnowledgeSubject.vue';
 import KnowledgeDetail from './views/KnowledgeDetail.vue';
 import Mistakes from './views/Mistakes.vue';
 import StudyLogs from './views/StudyLogs.vue';
@@ -14,6 +15,8 @@ const router = createRouter({
     { path: '/', component: Dashboard, meta: { auth: true } },
     { path: '/login', component: Login },
     { path: '/knowledge', component: Knowledge, meta: { auth: true } },
+    { path: '/knowledge/subject/:subject', component: KnowledgeSubject, meta: { auth: true } },
+    { path: '/knowledge/subject/:subject/chapter/:chapter', component: KnowledgeSubject, meta: { auth: true } },
     { path: '/knowledge/:id', component: KnowledgeDetail, meta: { auth: true } },
     { path: '/mistakes', component: Mistakes, meta: { auth: true } },
     { path: '/study-logs', component: StudyLogs, meta: { auth: true } },

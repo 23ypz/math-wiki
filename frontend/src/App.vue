@@ -8,15 +8,21 @@ const router = useRouter();
 const route = useRoute();
 const sidebarKnowledge = ref<KnowledgePoint[]>([]);
 
-const groupedSidebarKnowledge = computed(() => {
-  const groups = new Map<string, KnowledgePoint[]>();
-  sidebarKnowledge.value.slice(0, 60).forEach((item) => {
+const defaultSubjects = ['高等数学', '线性代数', '概率论与数理统计'];
+
+const sidebarSubjects = computed(() => {
+  const counts = new Map<string, number>();
+  defaultSubjects.forEach((subject) => counts.set(subject, 0));
+  sidebarKnowledge.value.forEach((item) => {
     const subject = item.subject || '未分类';
-    if (!groups.has(subject)) groups.set(subject, []);
-    groups.get(subject)!.push(item);
+    counts.set(subject, (counts.get(subject) || 0) + 1);
   });
-  return Array.from(groups.entries()).map(([subject, points]) => ({ subject, points }));
+  return Array.from(counts.entries()).map(([subject, count]) => ({ subject, count }));
 });
+
+function subjectPath(subject: string) {
+  return `/knowledge/subject/${encodeURIComponent(subject)}`;
+}
 
 async function loadSidebarKnowledge() {
   if (!isLoggedIn()) {
@@ -53,27 +59,24 @@ watch(() => route.fullPath, loadSidebarKnowledge);
       </div>
       <nav>
         <RouterLink to="/">总览</RouterLink>
-        <RouterLink to="/knowledge">知识点</RouterLink>
+        <RouterLink to="/knowledge">知识点管理</RouterLink>
         <RouterLink to="/mistakes">错题本</RouterLink>
         <RouterLink to="/reviews">今日复习</RouterLink>
         <RouterLink to="/study-logs">学习日志</RouterLink>
       </nav>
 
-      <div class="sidebar-knowledge" v-if="groupedSidebarKnowledge.length">
-        <div class="sidebar-section-title">知识点导航</div>
-        <div class="sidebar-knowledge-scroll">
-          <div v-for="group in groupedSidebarKnowledge" :key="group.subject" class="sidebar-subject-group">
-            <div class="sidebar-subject">{{ group.subject }}</div>
-            <RouterLink
-              v-for="point in group.points"
-              :key="point.id"
-              :to="`/knowledge/${point.id}`"
-              class="sidebar-knowledge-link"
-            >
-              <span>{{ point.title }}</span>
-              <small>{{ point.chapter || '未分章节' }}</small>
-            </RouterLink>
-          </div>
+      <div class="sidebar-knowledge" v-if="sidebarSubjects.length">
+        <div class="sidebar-section-title">知识点科目</div>
+        <div class="sidebar-subject-scroll">
+          <RouterLink
+            v-for="item in sidebarSubjects"
+            :key="item.subject"
+            :to="subjectPath(item.subject)"
+            class="sidebar-subject-link"
+          >
+            <span>{{ item.subject }}</span>
+            <small>{{ item.count }} 个知识点</small>
+          </RouterLink>
         </div>
       </div>
 
