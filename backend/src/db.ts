@@ -23,12 +23,12 @@ export function getPool(): Pool {
   return pool;
 }
 
-export async function rows<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T[]> {
+export async function rows<T = Record<string, unknown>>(sql: string, params: any[] = []): Promise<T[]> {
   const [result] = await getPool().execute(sql, params);
   return result as T[];
 }
 
-export async function exec(sql: string, params: unknown[] = []): Promise<ResultSetHeader> {
+export async function exec(sql: string, params: any[] = []): Promise<ResultSetHeader> {
   const [result] = await getPool().execute(sql, params);
   return result as ResultSetHeader;
 }
