@@ -7,6 +7,34 @@ function escapeHtml(value: string) {
     .replace(/'/g, '&#039;');
 }
 
+export type MarkdownHeading = {
+  id: string;
+  level: number;
+  text: string;
+};
+
+function normalizeMarkdownSource(source?: string | null) {
+  // 兼容用户把示例里的 \n 直接复制进输入框的情况。
+  return (source || '').replace(/\\n/g, '\n').trim();
+}
+
+function plainText(value: string) {
+  return value
+    .replace(/\\\[|\\\]|\\\(|\\\)/g, '')
+    .replace(/\$\$/g, '')
+    .replace(/\$/g, '')
+    .replace(/[`*_>#|\[\]()~-]/g, ' ')
+    .replace(/\\[a-zA-Z]+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export function stripMarkdown(source?: string | null, maxLength = 80) {
+  const text = plainText(normalizeMarkdownSource(source));
+  if (!text) return '暂无内容';
+  return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+}
+
 function renderInline(value: string) {
   let html = escapeHtml(value);
 
@@ -70,8 +98,38 @@ export function typesetMath() {
   }, 80);
 }
 
+export function extractHeadings(source?: string | null): MarkdownHeading[] {
+  const text = normalizeMarkdownSource(source);
+  if (!text) return [];
+
+  const headings: MarkdownHeading[] = [];
+  const lines = text.split(/\r?\n/);
+  let inCode = false;
+  let index = 0;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (line.startsWith('```')) {
+      inCode = !inCode;
+      continue;
+    }
+    if (inCode) continue;
+    const heading = line.match(/^(#{1,6})\s+(.+)$/);
+    if (heading) {
+      headings.push({
+        id: `section-${index}`,
+        level: Math.min(6, heading[1].length),
+        text: plainText(heading[2]) || heading[2]
+      });
+      index += 1;
+    }
+  }
+
+  return headings;
+}
+
 export function renderMarkdown(source?: string | null): string {
-  const text = (source || '').trim();
+  const text = normalizeMarkdownSource(source);
   if (!text) return '<p class="muted">暂无内容</p>';
 
   const lines = text.split(/\r?\n/);
@@ -79,6 +137,7 @@ export function renderMarkdown(source?: string | null): string {
   let inUl = false;
   let inOl = false;
   let inBlockQuote = false;
+  let headingIndex = 0;
 
   const closeUl = () => {
     if (inUl) {
@@ -175,7 +234,9 @@ export function renderMarkdown(source?: string | null): string {
     if (heading) {
       closeBlocks();
       const level = Math.min(6, heading[1].length);
-      html.push(`<h${level}>${renderInline(heading[2])}</h${level}>`);
+      const id = `section-${headingIndex}`;
+      headingIndex += 1;
+      html.push(`<h${level} id="${id}">${renderInline(heading[2])}</h${level}>`);
       i += 1;
       continue;
     }

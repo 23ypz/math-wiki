@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { request } from '../api';
-import { renderMarkdown, typesetMath } from '../markdown';
+import { renderMarkdown, stripMarkdown, typesetMath } from '../markdown';
 import type { KnowledgePoint } from '../types';
 
+const router = useRouter();
+const route = useRoute();
 const items = ref<KnowledgePoint[]>([]);
 const error = ref('');
 const editingId = ref<number | null>(null);
@@ -15,6 +18,7 @@ const previewHtml = computed(() => renderMarkdown(form.content_md));
 function reset() {
   editingId.value = null;
   Object.assign(form, { subject: '高等数学', chapter: '', title: '', content_md: '', mastery_level: 0 });
+  if (route.query.edit) router.replace('/knowledge');
 }
 
 async function load() {
@@ -25,8 +29,23 @@ async function load() {
   try {
     const res = await request<{ items: KnowledgePoint[] }>(`/knowledge?${params}`);
     items.value = res.items;
+    const editId = Number(route.query.edit);
+    if (Number.isFinite(editId) && editId > 0) {
+      const target = res.items.find((item) => item.id === editId);
+      if (target) edit(target, false);
+      else await loadOneForEdit(editId);
+    }
   } catch (e) {
     error.value = e instanceof Error ? e.message : '加载失败';
+  }
+}
+
+async function loadOneForEdit(id: number) {
+  try {
+    const res = await request<{ item: KnowledgePoint }>(`/knowledge/${id}`);
+    edit(res.item, false);
+  } catch {
+    // 忽略，保持列表页可用。
   }
 }
 
@@ -45,7 +64,7 @@ async function save() {
   }
 }
 
-function edit(item: KnowledgePoint) {
+function edit(item: KnowledgePoint, shouldScroll = true) {
   editingId.value = item.id;
   Object.assign(form, {
     subject: item.subject,
@@ -54,7 +73,8 @@ function edit(item: KnowledgePoint) {
     content_md: item.content_md || '',
     mastery_level: item.mastery_level || 0
   });
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  showPreview.value = true;
+  if (shouldScroll) window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 async function remove(id: number) {
@@ -71,6 +91,10 @@ watch([previewHtml, showPreview], () => {
   nextTick(typesetMath);
 }, { flush: 'post' });
 
+watch(() => route.query.edit, async () => {
+  await load();
+});
+
 onMounted(async () => {
   await load();
   await nextTick();
@@ -83,7 +107,7 @@ onMounted(async () => {
     <div class="page-title">
       <div>
         <h2>知识点</h2>
-        <p>按高数、线代、概率建立自己的数学一知识体系，支持 Markdown 预览。</p>
+        <p>按高数、线代、概率建立自己的数学一知识体系，列表只保留一行摘要，完整内容进入知识点页面查看。</p>
       </div>
     </div>
 
@@ -106,7 +130,10 @@ onMounted(async () => {
           </div>
           <label>标题<input v-model="form.title" placeholder="如 等价无穷小" /></label>
           <label>掌握程度 0-5<input v-model.number="form.mastery_level" type="number" min="0" max="5" /></label>
-          <label>内容 Markdown<textarea v-model="form.content_md" class="large-textarea" placeholder="# 核心概念\n- 常用公式\n- 典型题型\n- 易错点" /></label>
+          <label>内容 Markdown<textarea v-model="form.content_md" class="large-textarea" placeholder="# 核心概念
+- 常用公式
+- 典型题型
+- 易错点" /></label>
           <div class="actions">
             <button class="primary">保存</button>
             <button class="secondary" type="button" @click="reset">清空</button>
@@ -129,7 +156,7 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div class="card" style="margin-top:16px">
+    <div class="card knowledge-list-card" style="margin-top:16px">
       <div class="card-head">
         <h3>知识点列表</h3>
         <div class="form-row compact-filter">
@@ -140,15 +167,21 @@ onMounted(async () => {
           <button class="secondary" @click="load">搜索</button>
         </div>
       </div>
-      <table class="table">
-        <thead><tr><th>知识点</th><th>章节</th><th>掌握</th><th>内容预览</th><th>操作</th></tr></thead>
+      <table class="table compact-table knowledge-list-table">
+        <thead><tr><th>知识点</th><th>章节</th><th>掌握</th><th>内容摘要</th><th>操作</th></tr></thead>
         <tbody>
           <tr v-for="item in items" :key="item.id">
-            <td><strong>{{ item.title }}</strong><br><span class="badge">{{ item.subject }}</span></td>
-            <td>{{ item.chapter }}</td>
-            <td><div class="mini-progress"><span :style="{ width: `${Math.min(100, Math.max(0, item.mastery_level * 20))}%` }"></span></div>{{ item.mastery_level }}/5</td>
-            <td class="markdown-preview">{{ (item.content_md || '').slice(0, 120) }}</td>
-            <td><div class="actions"><button class="secondary" @click="edit(item)">编辑</button><button class="danger" @click="remove(item.id)">删除</button></div></td>
+            <td class="one-line-cell"><strong>{{ item.title }}</strong><span class="badge small-badge">{{ item.subject }}</span></td>
+            <td class="one-line-cell">{{ item.chapter || '未分章节' }}</td>
+            <td class="mastery-cell"><div class="mini-progress"><span :style="{ width: `${Math.min(100, Math.max(0, item.mastery_level * 20))}%` }"></span></div>{{ item.mastery_level }}/5</td>
+            <td><div class="one-line-preview">{{ stripMarkdown(item.content_md, 90) }}</div></td>
+            <td>
+              <div class="actions nowrap-actions">
+                <RouterLink class="link-button primary-link" :to="`/knowledge/${item.id}`">预览</RouterLink>
+                <button class="secondary" @click="edit(item)">编辑</button>
+                <button class="danger" @click="remove(item.id)">删除</button>
+              </div>
+            </td>
           </tr>
         </tbody>
       </table>
