@@ -96,3 +96,6 @@ VITE_API_BASE_URL=https://你的-vercel-domain.vercel.app/api
 - GitHub OAuth 登录
 - 多用户注册
 - AI 错因分析
+
+ 
+ 
