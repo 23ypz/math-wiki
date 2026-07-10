@@ -41,21 +41,33 @@ app.all('/api/admin/init-db', adapt(initDbHandler));
 // Knowledge points
 app.all('/api/knowledge', adapt(knowledgeIndexHandler));
 app.all('/api/knowledge/:id', (req, _res, next) => {
-  req.query.id = req.params.id;
+  Object.defineProperty(req, 'query', {
+    value: { ...req.query, id: req.params.id },
+    configurable: true,
+    enumerable: true
+  });
   next();
 }, adapt(knowledgeIdHandler));
 
 // Mistakes
 app.all('/api/mistakes', adapt(mistakesIndexHandler));
 app.all('/api/mistakes/:id', (req, _res, next) => {
-  req.query.id = req.params.id;
+  Object.defineProperty(req, 'query', {
+    value: { ...req.query, id: req.params.id },
+    configurable: true,
+    enumerable: true
+  });
   next();
 }, adapt(mistakesIdHandler));
 
 // Study logs
 app.all('/api/study-logs', adapt(studyLogsIndexHandler));
 app.all('/api/study-logs/:id', (req, _res, next) => {
-  req.query.id = req.params.id;
+  Object.defineProperty(req, 'query', {
+    value: { ...req.query, id: req.params.id },
+    configurable: true,
+    enumerable: true
+  });
   next();
 }, adapt(studyLogsIdHandler));
 
