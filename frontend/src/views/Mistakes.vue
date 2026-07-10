@@ -30,7 +30,8 @@ const filteredKnowledge = computed(() => knowledgeItems.value.filter((item) => i
 const selectedKnowledge = computed(() => knowledgeItems.value.find((item) => item.id === Number(form.knowledge_point_id)) || null);
 const questionPreview = computed(() => renderMarkdown(form.question_text));
 const answerPreview = computed(() => renderMarkdown(form.answer_text));
-const summaryPreview = computed(() => renderMarkdown(form.summary || form.wrong_reason));
+const wrongReasonPreview = computed(() => renderMarkdown(form.wrong_reason));
+const summaryPreview = computed(() => renderMarkdown(form.summary));
 
 watch(() => form.subject, () => {
   if (form.knowledge_point_id && !filteredKnowledge.value.some((item) => item.id === Number(form.knowledge_point_id))) {
@@ -38,7 +39,7 @@ watch(() => form.subject, () => {
   }
 });
 
-watch([questionPreview, answerPreview, summaryPreview], () => {
+watch([questionPreview, answerPreview, wrongReasonPreview, summaryPreview], () => {
   nextTick(typesetMath);
 }, { flush: 'post' });
 
@@ -178,7 +179,7 @@ onMounted(async () => {
           </div>
           <label>题目 Markdown<textarea v-model="form.question_text" class="large-textarea" /></label>
           <label>正确解法 Markdown<textarea v-model="form.answer_text" class="large-textarea" /></label>
-          <label>错误原因<textarea v-model="form.wrong_reason" placeholder="概念不清 / 公式记错 / 计算失误 / 方法不会..." /></label>
+          <label>错误原因 Markdown<textarea v-model="form.wrong_reason" placeholder="概念不清 / 公式记错 / 计算失误 / 方法不会..." /></label>
           <label>总结 Markdown<textarea v-model="form.summary" /></label>
           <div class="actions"><button class="primary">保存</button><button class="secondary" type="button" @click="reset">清空</button></div>
         </form>
@@ -192,7 +193,9 @@ onMounted(async () => {
         <div class="markdown-body" v-html="questionPreview"></div>
         <h4>正确解法</h4>
         <div class="markdown-body" v-html="answerPreview"></div>
-        <h4>错因与总结</h4>
+        <h4>错误原因</h4>
+        <div class="markdown-body" v-html="wrongReasonPreview"></div>
+        <h4>总结</h4>
         <div class="markdown-body" v-html="summaryPreview"></div>
         </div>
       </div>
