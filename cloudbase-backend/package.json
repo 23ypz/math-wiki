@@ -1,6 +1,6 @@
 {
   "name": "math-wiki-cloudbase-api",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -17,9 +17,8 @@
   "devDependencies": {
     "@types/express": "^5.0.5",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^24.10.1",
+    "@types/node": "^22.10.0",
     "tsx": "^4.20.6",
-    "typescript": "^5.9.3",
-    "@vercel/node": "^5.5.27"
+    "typescript": "^5.9.3"
   }
 }

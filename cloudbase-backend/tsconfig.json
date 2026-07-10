@@ -12,6 +12,6 @@
     "types": ["node"],
     "sourceMap": true
   },
-  "include": ["server.ts", "api/**/*.ts", "src/**/*.ts"],
+  "include": ["server.ts", "vercel-compat.d.ts", "api/**/*.ts", "src/**/*.ts"],
   "exclude": ["dist", "node_modules"]
 }

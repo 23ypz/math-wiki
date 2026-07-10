@@ -52,3 +52,7 @@ http://localhost/api/health
 - 原 `backend/` 仍保留，可继续部署到 Vercel 作为备用。
 - CloudBase 使用 `cloudbase-backend/`，不会影响现有前端和数据库。
 - 数据仍保存在原 TiDB Cloud 中，不需要迁移数据。
+
+## CloudBase 构建说明（v1.0.1）
+
+本目录不提交 `package-lock.json`。Docker 构建时使用国内 npm 镜像安装依赖，避免 CloudBase 构建节点访问外部或私有镜像超时。Dockerfile 使用单次依赖安装，完成 TypeScript 构建后再移除开发依赖。
