@@ -10,10 +10,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const data = body<{ email?: string; password?: string; guest?: boolean }>(req);
 
     if (data.guest === true) {
-      const userId = 'default-user';
-      const email = 'guest@math-wiki.local';
-      const token = signToken({ userId, email, role: 'guest' });
-      return ok(res, { token, user: { userId, email, role: 'guest' } });
+      return badRequest(res, 'Guest preview data is provided locally by the frontend.');
     }
     const email = asString(data.email).toLowerCase();
     const password = asString(data.password);

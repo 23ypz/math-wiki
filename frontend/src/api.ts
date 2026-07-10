@@ -1,3 +1,4 @@
+import { getGuestResponse } from './guest-data';
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
 export type AccessMode = 'admin' | 'guest';
@@ -30,8 +31,11 @@ export function isGuest() {
 
 export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const method = String(options.method || 'GET').toUpperCase();
-  if (isGuest() && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
-    throw new Error('游客模式仅支持浏览，登录管理员账号后才能保存或修改内容。');
+  if (isGuest()) {
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+      throw new Error('游客模式仅支持浏览，登录管理员账号后才能保存或修改内容。');
+    }
+    return getGuestResponse(path) as T;
   }
   const headers = new Headers(options.headers || {});
   headers.set('Content-Type', 'application/json');
@@ -52,10 +56,10 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
 }
 
 export async function guestLogin() {
-  return request<{ token: string; user: { email: string; userId: string; role: 'guest' } }>('/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ guest: true })
-  });
+  return {
+    token: 'local-guest-preview',
+    user: { email: 'guest@math-wiki.local', userId: 'guest-preview', role: 'guest' as const }
+  };
 }
 
 export async function login(email: string, password: string) {

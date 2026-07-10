@@ -46,3 +46,7 @@
 - 前端隐藏新增、编辑、删除、复习打卡、资料保存、备份导入导出等写入入口；
 - 后端对游客 Token 的所有非 GET/HEAD/OPTIONS 请求统一返回 403；
 - 管理员登录逻辑、CloudBase 部署和 TiDB 数据库结构保持不变。
+
+## 游客演示数据隔离
+
+游客模式使用 `frontend/src/guest-data.ts` 中的本地预设数据，不会请求或展示管理员在 TiDB Cloud 中保存的私人记录。管理员模式仍使用 CloudBase API 与 TiDB Cloud。
