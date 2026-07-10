@@ -1355,24 +1355,37 @@ input:focus,textarea:focus,select:focus { outline:none;border-color:#818cf8;box-
 }
 
 
-/* v11 guest framework preview and single-scroll landing fixes */
-html.landing-active,
+/* v12 landing page: use the browser root as the only scroll container. */
+html.landing-active {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100%;
+  overflow-x: clip;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
 body.landing-active {
   width: 100%;
   max-width: 100%;
-  overflow-x: clip;
+  min-height: 100%;
+  overflow: visible;
+  overscroll-behavior-y: auto;
 }
-body.landing-active {
-  overflow-y: auto;
-  overscroll-behavior-y: none;
+html.landing-active.login-modal-open,
+body.landing-active.login-modal-open {
+  overflow: hidden !important;
 }
 body.landing-active #app,
 body.landing-active .app-shell,
 body.landing-active .main.main-full-bleed {
   width: 100%;
-  min-height: 100%;
+  min-height: 0;
   height: auto;
+  max-height: none;
   overflow: visible;
+}
+body.landing-active .app-shell {
+  display: block;
 }
 
 .guest-framework-grid.is-readonly .card {

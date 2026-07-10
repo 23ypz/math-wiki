@@ -90,7 +90,8 @@ function setupRevealAnimations() {
 }
 
 watch(loginOpen, (open) => {
-  document.body.style.overflow = open ? 'hidden' : '';
+  document.documentElement.classList.toggle('login-modal-open', open);
+  document.body.classList.toggle('login-modal-open', open);
 });
 
 onMounted(() => {
@@ -104,7 +105,8 @@ onBeforeUnmount(() => {
   document.body.classList.remove('landing-active');
   window.removeEventListener('keydown', onKeydown);
   revealObserver?.disconnect();
-  document.body.style.overflow = '';
+  document.documentElement.classList.remove('login-modal-open');
+  document.body.classList.remove('login-modal-open');
 });
 </script>
 
@@ -843,16 +845,18 @@ onBeforeUnmount(() => {
     -webkit-backdrop-filter: none;
     background: rgba(4, 16, 31, .96);
   }
+  /* Keep scroll-reveal motion on tablets, but stop only the expensive endless background motion. */
   .star-layer-one,
   .star-layer-two,
   .hero-glow { animation: none !important; }
-  .landing-section {
-    content-visibility: auto;
-    contain-intrinsic-size: 780px;
-  }
   [data-reveal] {
-    transition-duration: .62s;
-    transform: translate3d(0, 28px, 0);
+    transition-duration: .78s;
+    transform: translate3d(0, 30px, 0);
+  }
+  .feature-grid.is-visible .feature-card,
+  .subject-grid.is-visible article,
+  .workflow-line.is-visible article {
+    animation-duration: .72s;
   }
 }
 
