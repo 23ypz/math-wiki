@@ -1236,3 +1236,49 @@ input:focus,textarea:focus,select:focus { outline:none;border-color:#818cf8;box-
   .sidebar-bottom { padding-top: 6px; }
   .sidebar-action { padding-top: 7px; padding-bottom: 7px; min-height: 38px; }
 }
+
+
+/* Tablet accordion visibility fix */
+.sidebar-scroll { scroll-padding-top: 8px; }
+.sidebar-knowledge { scroll-margin-top: 8px; }
+.sidebar-knowledge.is-open {
+  padding-bottom: 8px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.025);
+}
+.sidebar-knowledge.is-open .sidebar-toggle {
+  color: #eef2ff;
+  background: rgba(99,102,241,.13);
+}
+@media (max-width: 1180px), (hover: none) and (pointer: coarse) and (max-width: 1366px) {
+  .sidebar-scroll {
+    overflow-y: scroll;
+    touch-action: pan-y;
+    padding-bottom: 18px;
+  }
+  .sidebar-knowledge {
+    flex: 0 0 auto;
+    min-height: auto;
+  }
+  .sidebar-subject-scroll {
+    display: grid;
+    gap: 5px;
+    max-height: min(32dvh, 260px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    padding: 6px 4px 6px 8px;
+    margin-top: 2px;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-gutter: stable;
+  }
+  .sidebar-subject-scroll::-webkit-scrollbar { width: 7px; }
+  .sidebar-subject-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,.28); border-radius: 999px; }
+  .sidebar-subject-link {
+    flex: 0 0 auto;
+    min-height: 46px;
+    padding: 10px 12px;
+    background: rgba(255,255,255,.035);
+  }
+  .sidebar-toggle { position: relative; z-index: 1; }
+}

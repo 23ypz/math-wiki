@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { clearToken, isLoggedIn, request } from './api';
 import { cycleTheme, themeMode } from './theme';
@@ -15,6 +15,8 @@ const knowledgeOpen = ref(route.path.startsWith('/knowledge/subject') || /^\/kno
 const mistakesOpen = ref(route.path.startsWith('/mistakes/subject') || /^\/mistakes\/\d+/.test(route.path));
 const sidebarCollapsed = ref(localStorage.getItem('sidebar-collapsed') === '1');
 const mobileOpen = ref(false);
+const knowledgeSection = ref<HTMLElement | null>(null);
+const mistakesSection = ref<HTMLElement | null>(null);
 const defaultSubjects = ['高等数学', '线性代数', '概率论与数理统计'];
 
 const sidebarSubjects = computed(() => {
@@ -41,8 +43,26 @@ const navItems = [
 function subjectPath(subject: string) { return `/knowledge/subject/${encodeURIComponent(subject)}`; }
 function mistakeSubjectPath(subject: string) { return `/mistakes/subject/${encodeURIComponent(subject)}`; }
 function toggleSidebar() { sidebarCollapsed.value = !sidebarCollapsed.value; localStorage.setItem('sidebar-collapsed', sidebarCollapsed.value ? '1' : '0'); }
-function toggleKnowledge() { knowledgeOpen.value = !knowledgeOpen.value; if (knowledgeOpen.value) mistakesOpen.value = false; }
-function toggleMistakes() { mistakesOpen.value = !mistakesOpen.value; if (mistakesOpen.value) knowledgeOpen.value = false; }
+async function revealSidebarSection(section: HTMLElement | null) {
+  await nextTick();
+  requestAnimationFrame(() => {
+    section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+async function toggleKnowledge() {
+  knowledgeOpen.value = !knowledgeOpen.value;
+  if (knowledgeOpen.value) {
+    mistakesOpen.value = false;
+    await revealSidebarSection(knowledgeSection.value);
+  }
+}
+async function toggleMistakes() {
+  mistakesOpen.value = !mistakesOpen.value;
+  if (mistakesOpen.value) {
+    knowledgeOpen.value = false;
+    await revealSidebarSection(mistakesSection.value);
+  }
+}
 async function loadSidebarData() {
   if (!isLoggedIn()) return;
   try {
@@ -75,12 +95,12 @@ watch(mobileOpen, (open) => { document.body.style.overflow = open ? 'hidden' : '
         <nav class="main-nav">
           <RouterLink v-for="item in navItems" :key="item[0]" :to="item[0]"><span class="nav-icon">{{ item[1] }}</span><span class="nav-label">{{ item[2] }}</span></RouterLink>
         </nav>
-        <div class="sidebar-knowledge">
-          <button class="sidebar-toggle" @click="toggleKnowledge"><span><b>▦</b><em>知识点科目</em></span><small>{{ knowledgeOpen ? '−' : '+' }}</small></button>
+        <div ref="knowledgeSection" class="sidebar-knowledge" :class="{ 'is-open': knowledgeOpen }">
+          <button class="sidebar-toggle" :aria-expanded="knowledgeOpen" @click="toggleKnowledge"><span><b>▦</b><em>知识点科目</em></span><small>{{ knowledgeOpen ? '−' : '+' }}</small></button>
           <div v-if="knowledgeOpen && !sidebarCollapsed" class="sidebar-subject-scroll"><RouterLink v-for="item in sidebarSubjects" :key="item.subject" :to="subjectPath(item.subject)" class="sidebar-subject-link"><span>{{ item.subject }}</span><small>{{ item.count }}</small></RouterLink></div>
         </div>
-        <div class="sidebar-knowledge">
-          <button class="sidebar-toggle" @click="toggleMistakes"><span><b>◇</b><em>错题分类</em></span><small>{{ mistakesOpen ? '−' : '+' }}</small></button>
+        <div ref="mistakesSection" class="sidebar-knowledge" :class="{ 'is-open': mistakesOpen }">
+          <button class="sidebar-toggle" :aria-expanded="mistakesOpen" @click="toggleMistakes"><span><b>◇</b><em>错题分类</em></span><small>{{ mistakesOpen ? '−' : '+' }}</small></button>
           <div v-if="mistakesOpen && !sidebarCollapsed" class="sidebar-subject-scroll"><RouterLink v-for="item in sidebarMistakeSubjects" :key="item.subject" :to="mistakeSubjectPath(item.subject)" class="sidebar-subject-link"><span>{{ item.subject }}</span><small>{{ item.count }}</small></RouterLink></div>
         </div>
       </div>
