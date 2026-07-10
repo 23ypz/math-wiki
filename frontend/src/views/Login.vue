@@ -51,13 +51,39 @@ function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape' && loginOpen.value) closeLogin();
 }
 
+let revealObserver: IntersectionObserver | null = null;
+
+function setupRevealAnimations() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.querySelectorAll<HTMLElement>('[data-reveal]').forEach((element) => element.classList.add('is-visible'));
+    return;
+  }
+
+  revealObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('is-visible');
+        revealObserver?.unobserve(entry.target);
+      });
+    },
+    { threshold: 0.12, rootMargin: '0px 0px -8% 0px' },
+  );
+
+  document.querySelectorAll<HTMLElement>('[data-reveal]').forEach((element) => revealObserver?.observe(element));
+}
+
 watch(loginOpen, (open) => {
   document.body.style.overflow = open ? 'hidden' : '';
 });
 
-onMounted(() => window.addEventListener('keydown', onKeydown));
+onMounted(() => {
+  window.addEventListener('keydown', onKeydown);
+  nextTick(setupRevealAnimations);
+});
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown);
+  revealObserver?.disconnect();
   document.body.style.overflow = '';
 });
 </script>
@@ -121,13 +147,13 @@ onBeforeUnmount(() => {
       </section>
 
       <section id="features" class="landing-section light-section">
-        <div class="section-heading">
+        <div class="section-heading" data-reveal>
           <span>LEARNING TOOLS</span>
           <h2>从知识整理到错题复习，一站完成</h2>
           <p>不是简单保存笔记，而是把知识、错误和每天的学习行动串联起来。</p>
         </div>
 
-        <div class="feature-grid">
+        <div class="feature-grid" data-reveal>
           <article class="feature-card feature-card-wide">
             <div class="feature-icon blue">知</div>
             <div>
@@ -173,13 +199,13 @@ onBeforeUnmount(() => {
       </section>
 
       <section id="subjects" class="landing-section subject-section">
-        <div class="section-heading dark-heading">
+        <div class="section-heading dark-heading" data-reveal>
           <span>MATHEMATICS I</span>
           <h2>三大科目，一套清晰的学习框架</h2>
           <p>从章节到小知识点逐级深入，让庞杂内容始终保持结构。</p>
         </div>
 
-        <div class="subject-grid">
+        <div class="subject-grid" data-reveal>
           <article>
             <span>01</span>
             <h3>高等数学</h3>
@@ -199,19 +225,19 @@ onBeforeUnmount(() => {
       </section>
 
       <section id="workflow" class="landing-section light-section workflow-section">
-        <div class="section-heading">
+        <div class="section-heading" data-reveal>
           <span>STUDY WORKFLOW</span>
           <h2>记录、复习、反馈，形成自己的学习闭环</h2>
         </div>
 
-        <div class="workflow-line">
+        <div class="workflow-line" data-reveal>
           <article><b>1</b><h3>整理知识</h3><p>建立章节框架，沉淀公式、题型与易错点。</p></article>
           <article><b>2</b><h3>记录错误</h3><p>把错因和总结分开记录，关联对应知识点。</p></article>
           <article><b>3</b><h3>安排复习</h3><p>结合掌握程度、复习日期和 Todo 制订计划。</p></article>
           <article><b>4</b><h3>观察进步</h3><p>通过统计、成绩和复习历史持续调整重点。</p></article>
         </div>
 
-        <button class="bottom-login" type="button" @click="openLogin">登录并开始整理数学知识库 →</button>
+        <button class="bottom-login" data-reveal type="button" @click="openLogin">登录并开始整理数学知识库 →</button>
       </section>
     </main>
 
@@ -611,6 +637,139 @@ onBeforeUnmount(() => {
 .modal-fade-enter-from .login-modal,
 .modal-fade-leave-to .login-modal { transform: translateY(12px) scale(.98); opacity: 0; }
 
+
+/* Full-screen landing presentation and scroll reveal motion. */
+.landing-page {
+  width: 100%;
+  max-width: none;
+  isolation: isolate;
+  scroll-behavior: smooth;
+}
+.landing-header {
+  position: fixed;
+  inset: 0 0 auto 0;
+  width: 100%;
+  margin: 0;
+  padding-inline: max(24px, calc((100vw - 1180px) / 2));
+  background: linear-gradient(180deg, rgba(4, 16, 31, .92), rgba(4, 16, 31, .62) 72%, transparent);
+  backdrop-filter: blur(9px);
+  animation: landingHeaderIn .75s cubic-bezier(.2,.75,.2,1) both;
+}
+.hero-section {
+  min-height: 100svh;
+  width: 100%;
+  padding-top: clamp(150px, 19vh, 205px);
+  padding-bottom: clamp(82px, 10vh, 120px);
+}
+.light-section,
+.subject-section,
+.landing-footer {
+  width: 100%;
+}
+.hero-glow {
+  animation: heroGlowBreath 7s ease-in-out infinite alternate;
+}
+.star-layer-one { animation: starDrift 22s linear infinite alternate; }
+.star-layer-two { animation: starDriftReverse 30s linear infinite alternate; }
+.status-pill { animation: heroRise .72s .15s cubic-bezier(.2,.75,.2,1) both; }
+.hero-section h1 { animation: heroRise .9s .27s cubic-bezier(.16,.8,.22,1) both; }
+.hero-copy { animation: heroRise .9s .4s cubic-bezier(.16,.8,.22,1) both; }
+.hero-actions { animation: heroRise .9s .54s cubic-bezier(.16,.8,.22,1) both; }
+.hero-metrics { animation: heroRise .9s .68s cubic-bezier(.16,.8,.22,1) both; }
+
+[data-reveal] {
+  opacity: 0;
+  transform: translate3d(0, 46px, 0);
+  transition:
+    opacity .9s cubic-bezier(.16,.8,.22,1),
+    transform .9s cubic-bezier(.16,.8,.22,1);
+  will-change: opacity, transform;
+}
+[data-reveal].is-visible {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+/* Cards reveal one after another instead of appearing as a static block. */
+.feature-grid[data-reveal],
+.subject-grid[data-reveal],
+.workflow-line[data-reveal] {
+  opacity: 1;
+  transform: none;
+}
+.feature-grid[data-reveal] .feature-card,
+.subject-grid[data-reveal] article,
+.workflow-line[data-reveal] article {
+  opacity: 0;
+  transform: translate3d(0, 38px, 0) scale(.985);
+}
+.feature-grid.is-visible .feature-card,
+.subject-grid.is-visible article,
+.workflow-line.is-visible article {
+  animation: revealCard .82s cubic-bezier(.16,.8,.22,1) both;
+}
+.feature-grid.is-visible .feature-card:nth-child(2),
+.subject-grid.is-visible article:nth-child(2),
+.workflow-line.is-visible article:nth-child(2) { animation-delay: .11s; }
+.feature-grid.is-visible .feature-card:nth-child(3),
+.subject-grid.is-visible article:nth-child(3),
+.workflow-line.is-visible article:nth-child(3) { animation-delay: .22s; }
+.feature-grid.is-visible .feature-card:nth-child(4),
+.workflow-line.is-visible article:nth-child(4) { animation-delay: .33s; }
+.feature-grid.is-visible .feature-card:nth-child(5) { animation-delay: .44s; }
+
+.hero-actions button,
+.landing-nav button,
+.bottom-login {
+  position: relative;
+  overflow: hidden;
+}
+.hero-actions button::after,
+.landing-nav .nav-login::after,
+.bottom-login::after {
+  content: '';
+  position: absolute;
+  inset: -2px auto -2px -45%;
+  width: 34%;
+  transform: skewX(-20deg);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent);
+  transition: left .65s ease;
+}
+.hero-actions button:hover::after,
+.landing-nav .nav-login:hover::after,
+.bottom-login:hover::after { left: 118%; }
+.hero-primary span,
+.bottom-login {
+  transition: transform .22s ease, box-shadow .22s ease;
+}
+.hero-primary:hover span { display: inline-block; transform: translateX(4px); }
+.bottom-login:hover { transform: translateY(-3px); box-shadow: 0 18px 38px rgba(37,99,235,.3); }
+
+@keyframes landingHeaderIn {
+  from { opacity: 0; transform: translateY(-18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes heroRise {
+  from { opacity: 0; transform: translate3d(0, 34px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes revealCard {
+  from { opacity: 0; transform: translate3d(0, 38px, 0) scale(.985); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+@keyframes heroGlowBreath {
+  from { opacity: .72; transform: scale(1); }
+  to { opacity: 1; transform: scale(1.045); }
+}
+@keyframes starDrift {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(18px, 12px, 0); }
+}
+@keyframes starDriftReverse {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-20px, 16px, 0); }
+}
+
 @media (max-width: 900px) {
   .landing-header { height: 68px; }
   .landing-nav button:not(.nav-login) { display: none; }
@@ -627,7 +786,7 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 600px) {
-  .landing-header { width: calc(100% - 28px); }
+  .landing-header { width: 100%; padding-inline: 14px; }
   .landing-brand-text small { display: none; }
   .landing-brand-text strong { font-size: 16px; }
   .landing-nav { gap: 0; }
@@ -651,6 +810,10 @@ onBeforeUnmount(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * { scroll-behavior: auto !important; transition: none !important; }
+  * { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+  [data-reveal],
+  .feature-grid[data-reveal] .feature-card,
+  .subject-grid[data-reveal] article,
+  .workflow-line[data-reveal] article { opacity: 1 !important; transform: none !important; }
 }
 </style>

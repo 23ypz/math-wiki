@@ -110,7 +110,7 @@ watch(mobileOpen, (open) => { document.body.style.overflow = open ? 'hidden' : '
         <button class="sidebar-action danger-text" @click="logout"><span>↪</span><em>退出登录</em></button>
       </div>
     </aside>
-    <main class="main"><RouterView /></main>
+    <main class="main" :class="{ 'main-full-bleed': route.path === '/login' }"><RouterView /></main>
     <div class="toast-stack"><div v-for="toast in toasts" :key="toast.id" class="toast" :class="toast.kind">{{ toast.message }}</div></div>
   </div>
 </template>

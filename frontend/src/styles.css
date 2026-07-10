@@ -1290,3 +1290,13 @@ input:focus,textarea:focus,select:focus { outline:none;border-color:#818cf8;box-
   .sidebar .sidebar-knowledge { display: grid !important; }
   .sidebar-collapsed .sidebar-subject-scroll { display: grid !important; }
 }
+
+/* Full-bleed route layout for the public landing page. */
+.main.main-full-bleed {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  overflow: visible;
+}
