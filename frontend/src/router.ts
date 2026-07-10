@@ -5,6 +5,8 @@ import Knowledge from './views/Knowledge.vue';
 import KnowledgeSubject from './views/KnowledgeSubject.vue';
 import KnowledgeDetail from './views/KnowledgeDetail.vue';
 import Mistakes from './views/Mistakes.vue';
+import MistakesSubject from './views/MistakesSubject.vue';
+import MistakeDetail from './views/MistakeDetail.vue';
 import StudyLogs from './views/StudyLogs.vue';
 import Reviews from './views/Reviews.vue';
 import { isLoggedIn } from './api';
@@ -19,6 +21,9 @@ const router = createRouter({
     { path: '/knowledge/subject/:subject/chapter/:chapter', component: KnowledgeSubject, meta: { auth: true } },
     { path: '/knowledge/:id', component: KnowledgeDetail, meta: { auth: true } },
     { path: '/mistakes', component: Mistakes, meta: { auth: true } },
+    { path: '/mistakes/subject/:subject', component: MistakesSubject, meta: { auth: true } },
+    { path: '/mistakes/subject/:subject/chapter/:chapter', component: MistakesSubject, meta: { auth: true } },
+    { path: '/mistakes/:id', component: MistakeDetail, meta: { auth: true } },
     { path: '/study-logs', component: StudyLogs, meta: { auth: true } },
     { path: '/reviews', component: Reviews, meta: { auth: true } }
   ]

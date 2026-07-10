@@ -1,47 +1,35 @@
-# math-wiki-v5
+# Math Wiki v6
 
-考研数学一知识库在线系统 v5。
+考研数学一在线知识库与错题系统。
 
-## v5 更新重点
+## v6 更新内容
 
-- 左侧主导航不再堆叠全部知识点，只显示科目入口，例如高等数学、线性代数、概率论与数理统计。
-- 点击科目后进入科目页，页面顶部按章节分组，章节切换采用类似 OI Wiki 的横向章节导航。
-- 进入某个章节后，页面内部左侧只显示当前章节的小知识点目录。
-- 点击小知识点后进入知识点正文页，正文完整渲染 Markdown、公式、表格、代码块、引用、任务清单。
-- 知识点正文页左侧同时包含当前章节小知识点目录和本文目录。
-- 章节导航、小知识点目录、本文目录均加入滚动区域，避免知识点数量多时页面过长。
+- 左侧主导航的“知识点科目”改为点击后下拉展开，默认不再占用大量空间。
+- 新增“错题分类”下拉导航，错题也按“科目 → 章节 → 错题”组织。
+- 新增错题科目页 `/mistakes/subject/:subject`，支持章节横向切换。
+- 新增错题详情页 `/mistakes/:id`，完整渲染题目、正确解法、错因、总结中的 Markdown 与公式。
+- 错题管理列表增加“预览”按钮，可跳转到错题详情页。
+- 后端 `GET /api/mistakes/:id` 已补齐，用于错题详情页读取单条错题。
+- GitHub Pages workflow 已恢复为稳定的简单版本：`npm install` + `npm run build`，不启用 npm 缓存。
 
-## 更新方法
+## 更新方式
 
-用本压缩包覆盖原项目中的以下内容：
+1. 解压 `math-wiki-v6.zip`。
+2. 用压缩包中的 `frontend`、`backend`、`.github`、`README.md`、`.gitignore` 覆盖原项目对应文件。
+3. 在项目根目录执行：
 
-```text
-frontend
-backend
-.github
-README.md
-.gitignore
-```
-
-然后在项目根目录执行：
-
-```powershell
+```bash
 git add .
-git commit -m "upgrade subject chapter navigation v5"
+git commit -m "upgrade collapsible sidebar and mistake navigation v6"
 git push
 ```
 
-推送后会自动触发 GitHub Pages 前端部署和 Vercel 后端部署。
+4. 等 GitHub Actions 和 Vercel 自动部署完成。
+5. 不需要重新初始化数据库。
 
-## 数据库
+## 检查项
 
-本版本不需要重新初始化数据库。
-
-## 检查
-
-本地已检查：
-
-```text
-frontend npm run build 通过
-backend npm run typecheck 通过
-```
+- 打开左侧“知识点科目”，能下拉显示高等数学、线性代数、概率论与数理统计。
+- 打开左侧“错题分类”，能下拉显示错题科目。
+- 点击错题科目后，能进入按章节组织的错题页面。
+- 点击错题后，能进入详情页，并渲染 Markdown 和公式。

@@ -571,3 +571,82 @@ mjx-container[display="true"] {
 @media (max-width: 700px) {
   .chapter-point-grid { grid-template-columns: 1fr; }
 }
+
+/* v6 compact collapsible sidebars and mistake reading pages */
+.sidebar {
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+.sidebar::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,.24); border-radius: 999px; }
+.sidebar-toggle {
+  width: 100%;
+  border: none;
+  color: #dbeafe;
+  background: rgba(255,255,255,.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+}
+.sidebar-toggle span { font-weight: 800; }
+.sidebar-toggle small { color: #93c5fd; }
+.sidebar-toggle:hover { background: rgba(255,255,255,.14); color: white; }
+.sidebar .sidebar-knowledge {
+  gap: 8px;
+  padding-top: 12px;
+}
+.sidebar .sidebar-subject-scroll {
+  max-height: 220px;
+}
+.mistake-tab.active,
+.mistake-tab:hover {
+  color: #7c2d12;
+  background: #ffedd5;
+  border-color: #fed7aa;
+}
+.mistake-list-link:hover,
+.mistake-list-link.active {
+  background: #ffedd5;
+  color: #9a3412;
+  border-color: #fed7aa;
+}
+.mistake-card-link:hover {
+  border-color: #fdba74;
+  background: #fff7ed;
+}
+.detail-tip { margin-bottom: 16px; }
+.detail-section-title {
+  margin: 22px 0 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+  scroll-margin-top: 24px;
+}
+.section-markdown {
+  margin-bottom: 8px;
+  min-height: auto;
+}
+.review-info-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.review-info-grid div {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+.review-info-grid span { color: #64748b; font-size: 13px; }
+.review-info-grid strong { color: #0f172a; }
+.mistake-toc { margin-top: 4px; }
+@media (max-width: 900px) {
+  .review-info-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .review-info-grid { grid-template-columns: 1fr; }
+}

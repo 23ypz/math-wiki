@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { request } from '../api';
 import { renderMarkdown, typesetMath } from '../markdown';
 import type { KnowledgePoint, Mistake } from '../types';
 
+const route = useRoute();
 const items = ref<Mistake[]>([]);
 const knowledgeItems = ref<KnowledgePoint[]>([]);
 const error = ref('');
@@ -67,6 +69,21 @@ async function load() {
   }
 }
 
+async function editByIdFromQuery() {
+  const editId = Number(route.query.edit || 0);
+  if (!editId) return;
+  let target = items.value.find((item) => item.id === editId);
+  if (!target) {
+    try {
+      const res = await request<{ item: Mistake }>(`/mistakes/${editId}`);
+      target = res.item;
+    } catch {
+      return;
+    }
+  }
+  edit(target);
+}
+
 async function save() {
   error.value = '';
   const payload = {
@@ -117,6 +134,7 @@ async function remove(id: number) {
 
 onMounted(async () => {
   await Promise.all([loadKnowledge(), load()]);
+  await editByIdFromQuery();
   await nextTick();
   typesetMath();
 });
@@ -127,7 +145,7 @@ onMounted(async () => {
     <div class="page-title">
       <div>
         <h2>错题本</h2>
-        <p>新增“关联知识点”和 Markdown 预览，重点记录错因。</p>
+        <p>错题可以按科目和章节分类，也可以关联对应知识点，形成和知识框架一致的错题体系。</p>
       </div>
     </div>
 
@@ -193,16 +211,18 @@ onMounted(async () => {
     </div>
 
     <div class="card" style="margin-top:16px">
-      <table class="table">
-        <thead><tr><th>错题</th><th>关联知识点</th><th>状态</th><th>复习</th><th>错因</th><th>操作</th></tr></thead>
+      <div class="card-head"><h3>错题列表</h3><p class="muted">建议也可从左侧“错题分类”按科目章节浏览。</p></div>
+      <table class="table compact-table">
+        <thead><tr><th>错题</th><th>章节</th><th>关联知识点</th><th>状态</th><th>复习</th><th>错因</th><th>操作</th></tr></thead>
         <tbody>
           <tr v-for="item in items" :key="item.id">
-            <td><strong>{{ item.title }}</strong><br><span class="badge">{{ item.subject }}</span> {{ item.chapter }} · 难度 {{ item.difficulty }}/5</td>
+            <td><strong>{{ item.title }}</strong><br><span class="badge">{{ item.subject }}</span> · 难度 {{ item.difficulty }}/5</td>
+            <td>{{ item.chapter || '未分章节' }}</td>
             <td>{{ item.knowledge_title || '未关联' }}</td>
             <td>{{ item.status }}</td>
             <td>下次：{{ item.next_review_date || '未设置' }}<br>次数：{{ item.review_count }}</td>
             <td>{{ (item.wrong_reason || item.summary || '').slice(0, 80) }}</td>
-            <td><div class="actions"><button class="secondary" @click="edit(item)">编辑</button><button class="danger" @click="remove(item.id)">删除</button></div></td>
+            <td><div class="actions nowrap-actions"><RouterLink class="link-button primary-link" :to="`/mistakes/${item.id}`">预览</RouterLink><button class="secondary" @click="edit(item)">编辑</button><button class="danger" @click="remove(item.id)">删除</button></div></td>
           </tr>
         </tbody>
       </table>

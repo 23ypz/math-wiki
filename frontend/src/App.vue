@@ -2,11 +2,14 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { clearToken, isLoggedIn, request } from './api';
-import type { KnowledgePoint } from './types';
+import type { KnowledgePoint, Mistake } from './types';
 
 const router = useRouter();
 const route = useRoute();
 const sidebarKnowledge = ref<KnowledgePoint[]>([]);
+const sidebarMistakes = ref<Mistake[]>([]);
+const knowledgeOpen = ref(route.path.startsWith('/knowledge/subject') || /^\/knowledge\/\d+/.test(route.path));
+const mistakesOpen = ref(route.path.startsWith('/mistakes/subject') || /^\/mistakes\/\d+/.test(route.path));
 
 const defaultSubjects = ['高等数学', '线性代数', '概率论与数理统计'];
 
@@ -20,31 +23,56 @@ const sidebarSubjects = computed(() => {
   return Array.from(counts.entries()).map(([subject, count]) => ({ subject, count }));
 });
 
+const sidebarMistakeSubjects = computed(() => {
+  const counts = new Map<string, number>();
+  defaultSubjects.forEach((subject) => counts.set(subject, 0));
+  sidebarMistakes.value.forEach((item) => {
+    const subject = item.subject || '未分类';
+    counts.set(subject, (counts.get(subject) || 0) + 1);
+  });
+  return Array.from(counts.entries()).map(([subject, count]) => ({ subject, count }));
+});
+
 function subjectPath(subject: string) {
   return `/knowledge/subject/${encodeURIComponent(subject)}`;
 }
 
-async function loadSidebarKnowledge() {
+function mistakeSubjectPath(subject: string) {
+  return `/mistakes/subject/${encodeURIComponent(subject)}`;
+}
+
+async function loadSidebarData() {
   if (!isLoggedIn()) {
     sidebarKnowledge.value = [];
+    sidebarMistakes.value = [];
     return;
   }
   try {
-    const res = await request<{ items: KnowledgePoint[] }>('/knowledge');
-    sidebarKnowledge.value = res.items;
+    const [knowledgeRes, mistakeRes] = await Promise.all([
+      request<{ items: KnowledgePoint[] }>('/knowledge'),
+      request<{ items: Mistake[] }>('/mistakes')
+    ]);
+    sidebarKnowledge.value = knowledgeRes.items;
+    sidebarMistakes.value = mistakeRes.items;
   } catch {
     sidebarKnowledge.value = [];
+    sidebarMistakes.value = [];
   }
 }
 
 function logout() {
   clearToken();
   sidebarKnowledge.value = [];
+  sidebarMistakes.value = [];
   router.push('/login');
 }
 
-onMounted(loadSidebarKnowledge);
-watch(() => route.fullPath, loadSidebarKnowledge);
+onMounted(loadSidebarData);
+watch(() => route.fullPath, () => {
+  if (route.path.startsWith('/knowledge/subject') || /^\/knowledge\/\d+/.test(route.path)) knowledgeOpen.value = true;
+  if (route.path.startsWith('/mistakes/subject') || /^\/mistakes\/\d+/.test(route.path)) mistakesOpen.value = true;
+  loadSidebarData();
+});
 </script>
 
 <template>
@@ -65,9 +93,12 @@ watch(() => route.fullPath, loadSidebarKnowledge);
         <RouterLink to="/study-logs">学习日志</RouterLink>
       </nav>
 
-      <div class="sidebar-knowledge" v-if="sidebarSubjects.length">
-        <div class="sidebar-section-title">知识点科目</div>
-        <div class="sidebar-subject-scroll">
+      <div class="sidebar-knowledge">
+        <button class="sidebar-toggle" type="button" @click="knowledgeOpen = !knowledgeOpen">
+          <span>知识点科目</span>
+          <small>{{ knowledgeOpen ? '收起' : '展开' }}</small>
+        </button>
+        <div class="sidebar-subject-scroll" v-if="knowledgeOpen">
           <RouterLink
             v-for="item in sidebarSubjects"
             :key="item.subject"
@@ -76,6 +107,24 @@ watch(() => route.fullPath, loadSidebarKnowledge);
           >
             <span>{{ item.subject }}</span>
             <small>{{ item.count }} 个知识点</small>
+          </RouterLink>
+        </div>
+      </div>
+
+      <div class="sidebar-knowledge">
+        <button class="sidebar-toggle" type="button" @click="mistakesOpen = !mistakesOpen">
+          <span>错题分类</span>
+          <small>{{ mistakesOpen ? '收起' : '展开' }}</small>
+        </button>
+        <div class="sidebar-subject-scroll" v-if="mistakesOpen">
+          <RouterLink
+            v-for="item in sidebarMistakeSubjects"
+            :key="item.subject"
+            :to="mistakeSubjectPath(item.subject)"
+            class="sidebar-subject-link"
+          >
+            <span>{{ item.subject }}</span>
+            <small>{{ item.count }} 道错题</small>
           </RouterLink>
         </div>
       </div>

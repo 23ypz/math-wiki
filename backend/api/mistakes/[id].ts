@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { exec } from '../../src/db.js';
+import { exec, rows } from '../../src/db.js';
 import { requireUser } from '../../src/auth.js';
 import { applyCors, asInt, asString, badRequest, body, methodNotAllowed, notFound, ok, one, serverError } from '../../src/http.js';
 
@@ -12,6 +12,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!Number.isFinite(id)) return badRequest(res, 'Invalid id.');
 
   try {
+    if (req.method === 'GET') {
+      const items = await rows(
+        `SELECT m.*, kp.title AS knowledge_title
+         FROM mistakes m
+         LEFT JOIN knowledge_points kp ON kp.id = m.knowledge_point_id AND kp.user_id = m.user_id
+         WHERE m.id = ? AND m.user_id = ?
+         LIMIT 1`,
+        [id, user.userId]
+      );
+      if (!items.length) return notFound(res);
+      return ok(res, { item: items[0] });
+    }
+
     if (req.method === 'PUT') {
       const data = body<Record<string, unknown>>(req);
       const result = await exec(
