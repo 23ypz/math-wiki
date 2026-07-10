@@ -86,7 +86,7 @@ watch(mobileOpen, (open) => { document.body.style.overflow = open ? 'hidden' : '
     <div v-if="mobileOpen" class="mobile-overlay" @click="mobileOpen = false"></div>
     <aside v-if="isLoggedIn()" class="sidebar" :class="{ 'mobile-open': mobileOpen }">
       <div class="sidebar-top">
-        <div class="brand"><div class="brand-mark">研</div><div class="brand-copy"><h1>数学一 Wiki</h1><p>YOUR STUDY OS</p></div><button class="collapse-button" @click="toggleSidebar">{{ sidebarCollapsed ? '›' : '‹' }}</button><button class="drawer-close" aria-label="关闭导航" @click="mobileOpen = false">×</button></div>
+        <div class="brand"><div class="brand-mark">研</div><div class="brand-copy"><h1>Math Wiki</h1><p>YOUR STUDY OS</p></div><button class="collapse-button" @click="toggleSidebar">{{ sidebarCollapsed ? '›' : '‹' }}</button><button class="drawer-close" aria-label="关闭导航" @click="mobileOpen = false">×</button></div>
         <RouterLink to="/profile" class="sidebar-profile">
           <div class="mini-avatar" :class="`avatar-${profile?.avatar_style || 'blue'}`">{{ initials }}</div>
           <div class="profile-copy"><strong>{{ guestMode ? '游客浏览' : (profile?.nickname || 'Math Seeker') }}</strong><small>{{ guestMode ? '只读模式 · 数据不会被修改' : (examDays === null ? '完善个人资料' : examDays >= 0 ? `距离考试 ${examDays} 天` : '新的阶段，继续前进') }}</small></div>

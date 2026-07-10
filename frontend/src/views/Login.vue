@@ -118,9 +118,9 @@ onBeforeUnmount(() => {
 
     <header class="landing-header">
       <button class="landing-brand" type="button" aria-label="返回首页" @click="scrollToSection('hero')">
-        <span class="landing-logo">研</span>
+        <span class="landing-logo">数</span>
         <span class="landing-brand-text">
-          <strong>数学一 Wiki</strong>
+          <strong>Math Wiki</strong>
           <small>YOUR STUDY OS</small>
         </span>
       </button>
@@ -148,7 +148,7 @@ onBeforeUnmount(() => {
 
         <p class="hero-copy">
           将高等数学、线性代数与概率论的知识点、错题、复习计划和学习进度连接起来。
-          <br />让每一次记录都能转化为下一次复习的明确方向。
+          <br />建立属于自己的考研数学知识库。
         </p>
 
         <div class="hero-actions">
