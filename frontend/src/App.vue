@@ -93,6 +93,7 @@ watch(() => route.fullPath, () => {
         <RouterLink to="/reviews">今日复习</RouterLink>
         <RouterLink to="/study-logs">学习日志</RouterLink>
         <RouterLink to="/progress">学习进度</RouterLink>
+        <RouterLink to="/todos">Todo 日历</RouterLink>
         <RouterLink to="/search">全局搜索</RouterLink>
       </nav>
 

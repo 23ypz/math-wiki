@@ -98,3 +98,22 @@ CREATE TABLE IF NOT EXISTS study_goals (
   INDEX idx_goal_user_status (user_id, status),
   INDEX idx_goal_user_deadline (user_id, deadline)
 );
+
+CREATE TABLE IF NOT EXISTS todo_items (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id VARCHAR(64) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  todo_date DATE NOT NULL,
+  start_time TIME NULL,
+  task_type VARCHAR(50) DEFAULT '其他',
+  subject VARCHAR(50),
+  chapter VARCHAR(100),
+  priority VARCHAR(20) DEFAULT '普通',
+  status VARCHAR(20) DEFAULT '待完成',
+  note TEXT,
+  completed_at DATETIME NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_todo_user_date (user_id, todo_date),
+  INDEX idx_todo_user_status (user_id, status)
+);

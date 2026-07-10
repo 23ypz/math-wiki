@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { request } from '../api';
-import type { ExamScore, KnowledgePoint, Mistake, ReviewRecord, StudyGoal, StudyLog } from '../types';
+import type { ExamScore, KnowledgePoint, Mistake, ReviewRecord, StudyGoal, StudyLog, TodoItem } from '../types';
 
 const loading = ref(true);
 const exporting = ref(false);
@@ -9,6 +9,7 @@ const importing = ref(false);
 const importMode = ref<'merge' | 'overwrite'>('merge');
 const importSummary = ref('');
 const error = ref('');
+const todayTodos = ref<TodoItem[]>([]);
 const data = ref<any>({
   mistakeCount: 0,
   knowledgeCount: 0,
@@ -65,7 +66,13 @@ async function load() {
   loading.value = true;
   error.value = '';
   try {
-    data.value = await request('/stats/overview');
+    const today = new Date().toISOString().slice(0, 10);
+    const [overview, todoRes] = await Promise.all([
+      request<any>('/stats/overview'),
+      request<{ items: TodoItem[] }>(`/progress?resource=todos&from=${today}&to=${today}`)
+    ]);
+    data.value = overview;
+    todayTodos.value = todoRes.items;
   } catch (e) {
     error.value = e instanceof Error ? e.message : '加载失败';
   } finally {
@@ -86,25 +93,27 @@ function download(filename: string, content: string, type = 'application/json;ch
 }
 
 async function fetchBackupData() {
-  const [knowledge, mistakes, studyLogs, exams, goals] = await Promise.all([
+  const [knowledge, mistakes, studyLogs, exams, goals, todos] = await Promise.all([
     request<{ items: KnowledgePoint[] }>('/knowledge'),
     request<{ items: Mistake[] }>('/mistakes?sort=created_asc'),
     request<{ items: StudyLog[] }>('/study-logs'),
     request<{ items: ExamScore[] }>('/progress?resource=exams'),
-    request<{ items: StudyGoal[] }>('/progress?resource=goals')
+    request<{ items: StudyGoal[] }>('/progress?resource=goals'),
+    request<{ items: TodoItem[] }>('/progress?resource=todos')
   ]);
   const reviewGroups = await Promise.all(mistakes.items.map(async (item) => {
     const res = await request<{ items: ReviewRecord[] }>(`/review-records?mistake_id=${item.id}`);
     return res.items;
   }));
   return {
-    version: 9,
+    version: 11,
     exported_at: new Date().toISOString(),
     knowledge_points: knowledge.items,
     mistakes: mistakes.items,
     study_logs: studyLogs.items,
     exam_scores: exams.items,
     study_goals: goals.items,
+    todo_items: todos.items,
     review_records: reviewGroups.flat()
   };
 }
@@ -114,7 +123,7 @@ async function exportJson() {
   error.value = '';
   try {
     const backup = await fetchBackupData();
-    download(`math-wiki-v9-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(backup, null, 2));
+    download(`math-wiki-v11-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(backup, null, 2));
   } catch (e) {
     error.value = e instanceof Error ? e.message : '导出失败';
   } finally {
@@ -143,7 +152,9 @@ async function exportMarkdown() {
     for (const item of backup.exam_scores) lines.push('', `### ${item.exam_date || ''} ${item.exam_name}`, `- 类型：${item.exam_type}`, `- 总分：${item.total_score}`, `- 高数 / 线代 / 概率：${item.calculus_score} / ${item.linear_algebra_score} / ${item.probability_score}`, `- 用时：${item.duration_minutes} 分钟`, '', item.note || '');
     lines.push('', '## 五、阶段目标');
     for (const item of backup.study_goals) lines.push('', `### ${item.title}`, `- 类型：${item.goal_type}`, `- 状态：${item.status}`, `- 进度：${item.current_value}/${item.target_value}`, `- 截止日期：${item.deadline || '未设置'}`, '', item.note || '');
-    download(`math-wiki-v9-export-${new Date().toISOString().slice(0, 10)}.md`, lines.join('\n'), 'text/markdown;charset=utf-8');
+    lines.push('', '## 六、Todo 计划');
+    for (const item of backup.todo_items) lines.push('', `### ${item.todo_date} ${item.title}`, `- 时间：${item.start_time || '未设置'}`, `- 类型：${item.task_type}`, `- 科目：${item.subject || '未分类'}`, `- 章节：${item.chapter || '未填写'}`, `- 优先级：${item.priority}`, `- 状态：${item.status}`, '', item.note || '');
+    download(`math-wiki-v11-export-${new Date().toISOString().slice(0, 10)}.md`, lines.join('\n'), 'text/markdown;charset=utf-8');
   } catch (e) {
     error.value = e instanceof Error ? e.message : '导出失败';
   } finally {
@@ -152,18 +163,20 @@ async function exportMarkdown() {
 }
 
 async function deleteCurrentData() {
-  const [knowledge, mistakes, studyLogs, exams, goals] = await Promise.all([
+  const [knowledge, mistakes, studyLogs, exams, goals, todos] = await Promise.all([
     request<{ items: KnowledgePoint[] }>('/knowledge'),
     request<{ items: Mistake[] }>('/mistakes'),
     request<{ items: StudyLog[] }>('/study-logs'),
     request<{ items: ExamScore[] }>('/progress?resource=exams'),
-    request<{ items: StudyGoal[] }>('/progress?resource=goals')
+    request<{ items: StudyGoal[] }>('/progress?resource=goals'),
+    request<{ items: TodoItem[] }>('/progress?resource=todos')
   ]);
   for (const item of mistakes.items) await request(`/mistakes/${item.id}`, { method: 'DELETE' });
   for (const item of knowledge.items) await request(`/knowledge/${item.id}`, { method: 'DELETE' });
   for (const item of studyLogs.items) await request(`/study-logs/${item.id}`, { method: 'DELETE' });
   for (const item of exams.items) await request(`/progress?resource=exams&id=${item.id}`, { method: 'DELETE' });
   for (const item of goals.items) await request(`/progress?resource=goals&id=${item.id}`, { method: 'DELETE' });
+  for (const item of todos.items) await request(`/progress?resource=todos&id=${item.id}`, { method: 'DELETE' });
 }
 
 async function importBackup(event: Event) {
@@ -182,9 +195,10 @@ async function importBackup(event: Event) {
     const reviewRecords = Array.isArray(backup.review_records) ? backup.review_records : [];
     const examScores = Array.isArray(backup.exam_scores) ? backup.exam_scores : [];
     const studyGoals = Array.isArray(backup.study_goals) ? backup.study_goals : [];
-    if (!knowledge.length && !mistakes.length && !studyLogs.length) throw new Error('备份文件中没有可导入的数据。');
+    const todoItems = Array.isArray(backup.todo_items) ? backup.todo_items : [];
+    if (!knowledge.length && !mistakes.length && !studyLogs.length && !examScores.length && !studyGoals.length && !todoItems.length) throw new Error('备份文件中没有可导入的数据。');
     if (importMode.value === 'overwrite') {
-      if (!confirm('覆盖模式会先删除当前知识点、错题和学习日志，确定继续吗？')) return;
+      if (!confirm('覆盖模式会先删除当前知识点、错题、学习日志、成绩、目标和 Todo，确定继续吗？')) return;
       await deleteCurrentData();
     }
 
@@ -206,6 +220,7 @@ async function importBackup(event: Event) {
 
     for (const item of examScores) await request('/progress?resource=exams', { method: 'POST', body: JSON.stringify(item) });
     for (const item of studyGoals) await request('/progress?resource=goals', { method: 'POST', body: JSON.stringify(item) });
+    for (const item of todoItems) await request('/progress?resource=todos', { method: 'POST', body: JSON.stringify(item) });
 
     for (const record of reviewRecords) {
       const newMistakeId = mistakeMap.get(Number(record.mistake_id));
@@ -213,7 +228,7 @@ async function importBackup(event: Event) {
       await request('/review-records', { method: 'POST', body: JSON.stringify({ ...record, mistake_id: newMistakeId, preserve_state: true }) });
     }
 
-    importSummary.value = `导入完成：知识点 ${knowledge.length} 个，错题 ${mistakes.length} 道，学习日志 ${studyLogs.length} 条，复习记录 ${reviewRecords.length} 条，成绩 ${examScores.length} 条，目标 ${studyGoals.length} 个。`;
+    importSummary.value = `导入完成：知识点 ${knowledge.length} 个，错题 ${mistakes.length} 道，学习日志 ${studyLogs.length} 条，复习记录 ${reviewRecords.length} 条，成绩 ${examScores.length} 条，目标 ${studyGoals.length} 个，Todo ${todoItems.length} 项。`;
     await load();
   } catch (e) {
     error.value = e instanceof Error ? e.message : '导入失败';
@@ -252,10 +267,21 @@ onMounted(load);
       <div class="card"><h3>本周学习报告</h3><p>{{ weeklySummary }}</p><div class="mini-stats"><span>进行中目标 <strong>{{ data.activeGoalCount }}</strong></span><span>最新成绩 <strong>{{ data.latestExam?.total_score ?? '-' }}</strong></span></div><RouterLink class="link-button secondary-link" to="/progress">查看成绩与阶段目标</RouterLink></div>
     </div>
 
+    <div class="card" style="margin-top:16px">
+      <div class="card-head"><div><h3>今日 Todo</h3><p class="muted">{{ todayTodos.filter(item => item.status === '已完成').length }} / {{ todayTodos.length }} 已完成</p></div><RouterLink class="link-button secondary-link" to="/todos">打开 Todo 日历</RouterLink></div>
+      <div v-if="todayTodos.length" class="dashboard-todo-list">
+        <div v-for="item in todayTodos.slice(0, 6)" :key="item.id" class="dashboard-todo-item" :class="{ completed: item.status === '已完成' }">
+          <span>{{ item.status === '已完成' ? '✓' : '○' }}</span><div><strong>{{ item.title }}</strong><small>{{ item.start_time ? String(item.start_time).slice(0, 5) : '未设时间' }} · {{ item.task_type }} · {{ item.priority }}</small></div>
+        </div>
+        <p v-if="todayTodos.length > 6" class="muted">还有 {{ todayTodos.length - 6 }} 项，请进入 Todo 日历查看。</p>
+      </div>
+      <p v-else class="muted">今天还没有 Todo，点击右上角进入日历添加计划。</p>
+    </div>
+
     <div class="card" style="margin-top:16px"><h3>下一步复习建议</h3><p v-if="data.overdueCount > 0">你有 {{ data.overdueCount }} 道错题已经逾期，建议先进入“今日复习”清理逾期内容。</p><p v-else-if="data.dueCount > 0">今天有 {{ data.dueCount }} 道错题待复习，完成后再复盘薄弱知识点。</p><p v-else-if="data.weakKnowledge.length">今天没有到期错题，可以优先复盘“{{ data.weakKnowledge[0].title }}”。</p><p v-else>今天没有到期错题，建议继续整理新知识点或完成一组章节练习。</p></div>
 
     <div class="card" style="margin-top:16px">
-      <h3>JSON 备份恢复</h3><p class="muted">合并模式保留现有数据；覆盖模式会先删除现有知识点、错题和学习日志。</p>
+      <h3>JSON 备份恢复</h3><p class="muted">合并模式保留现有数据；覆盖模式会先删除现有知识点、错题、学习日志、成绩、目标和 Todo。</p>
       <div class="import-row"><select v-model="importMode"><option value="merge">合并导入</option><option value="overwrite">覆盖导入</option></select><label class="link-button secondary-link file-button">{{ importing ? '正在导入...' : '选择 JSON 备份' }}<input type="file" accept="application/json,.json" :disabled="importing" @change="importBackup" /></label></div>
       <p v-if="importSummary" class="success-message">{{ importSummary }}</p>
     </div>

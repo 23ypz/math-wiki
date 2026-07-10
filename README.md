@@ -1,29 +1,29 @@
-# 数学一 Wiki v10
+# 数学一 Wiki v11
 
-个人考研数学一知识点、错题、复习和学习进度管理系统。
+本项目采用：
 
-## v10 新增
+- GitHub Pages：Vue + Vite 前端
+- Vercel Functions：TypeScript 后端 API
+- TiDB Cloud：在线数据库
 
-- 错题详情默认隐藏正确解法，适合先独立作答再查看
-- 错题详情可单独显示或隐藏“正确解法”和“错因与总结”
-- 同章节错题支持上一题、下一题和随机一题
-- 增加沉浸阅读模式，可隐藏章节导航和左侧目录
-- 增加“打印错题本”页面
-- 打印页支持按科目、章节、知识点、状态、难度和标签筛选
-- 支持“只打印题目”“题目 + 正确解法”“完整错题”三种模式
-- 增加快速录题模式，只填写标题、科目、章节、题目和错误原因
-- 快速录题支持“保存并继续”，并保留上一次科目和章节
-- 快速录题默认难度 3、状态“待复习”、下次复习日期为明天
+## v11 新增
 
-## 部署结构
+- Todo 月历视图
+- 点击日期添加每日学习任务
+- Todo 编辑、删除和完成状态切换
+- 延期到明天
+- 任务类型、科目、章节、优先级与备注
+- 保存并继续添加
+- 总览页显示今日 Todo
+- JSON / Markdown 备份包含 Todo 数据
 
-- 前端：Vue 3 + Vite，GitHub Pages
-- 后端：Vercel Functions
-- 数据库：TiDB Cloud
+## 数据库升级
 
-## 升级说明
+部署 Vercel 后端后，再次调用 `/api/admin/init-db`，创建 `todo_items` 表。初始化接口使用 `CREATE TABLE IF NOT EXISTS`，不会删除已有数据。
 
-v10 只修改前端，不新增数据库字段，也不新增 Vercel Function。
-更新后不需要重新执行 `/api/admin/init-db`。
+## 部署
 
-GitHub Actions 继续保留已经验证成功的稳定配置：Node.js 20、`npm install`、GitHub Pages Actions。
+1. 将项目推送到 GitHub。
+2. Vercel 项目 Root Directory 保持 `backend`。
+3. 等 Vercel 部署完成后调用 `/api/admin/init-db`。
+4. GitHub Actions 自动部署 `frontend` 到 GitHub Pages。

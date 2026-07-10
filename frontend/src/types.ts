@@ -82,3 +82,20 @@ export type StudyGoal = {
   created_at?: string;
   updated_at?: string;
 };
+
+
+export type TodoItem = {
+  id: number;
+  title: string;
+  todo_date: string;
+  start_time: string | null;
+  task_type: string;
+  subject: string;
+  chapter: string;
+  priority: string;
+  status: string;
+  note: string;
+  completed_at: string | null;
+  created_at?: string;
+  updated_at?: string;
+};

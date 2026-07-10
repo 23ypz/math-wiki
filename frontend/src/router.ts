@@ -12,6 +12,7 @@ import StudyLogs from './views/StudyLogs.vue';
 import Reviews from './views/Reviews.vue';
 import Search from './views/Search.vue';
 import Progress from './views/Progress.vue';
+import TodoCalendar from './views/TodoCalendar.vue';
 import { isLoggedIn } from './api';
 
 const router = createRouter({
@@ -31,7 +32,8 @@ const router = createRouter({
     { path: '/study-logs', component: StudyLogs, meta: { auth: true } },
     { path: '/reviews', component: Reviews, meta: { auth: true } },
     { path: '/search', component: Search, meta: { auth: true } },
-    { path: '/progress', component: Progress, meta: { auth: true } }
+    { path: '/progress', component: Progress, meta: { auth: true } },
+    { path: '/todos', component: TodoCalendar, meta: { auth: true } }
   ]
 });
 
