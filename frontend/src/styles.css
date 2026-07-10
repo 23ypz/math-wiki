@@ -1114,3 +1114,125 @@ input:focus,textarea:focus,select:focus { outline:none;border-color:#818cf8;box-
   .app-shell { flex-direction:row; }.sidebar { position:fixed;left:0;top:0;height:100vh;width:270px;transform:translateX(-105%); }.sidebar.mobile-open { transform:translateX(0); }.mobile-menu-button,.mobile-overlay { display:block; }.main { padding:72px 16px 30px; }.sidebar-collapsed .sidebar { width:270px; }.sidebar-collapsed .brand-copy,.sidebar-collapsed .profile-copy,.sidebar-collapsed .nav-label,.sidebar-collapsed .sidebar-toggle em,.sidebar-collapsed .sidebar-toggle small,.sidebar-collapsed .sidebar-action em { display:initial; }.collapse-button { display:none; }
 }
 @media (max-width: 620px) { .profile-hero{align-items:flex-start;flex-direction:column}.profile-stat-grid{grid-template-columns:1fr}.profile-title{align-items:flex-start}.profile-meta{display:grid}.toast-stack{left:16px;right:16px;top:16px}.toast{min-width:0}.page-title h2{font-size:26px} }
+
+/* Tablet navigation reliability patch */
+.sidebar { overflow: hidden; }
+.sidebar-top { flex: 0 0 auto; display: grid; gap: 12px; }
+.sidebar-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
+}
+.sidebar-scroll::-webkit-scrollbar { width: 6px; }
+.sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,.22); border-radius: 999px; }
+.sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+.sidebar-bottom { flex: 0 0 auto; background: inherit; }
+.sidebar-subject-scroll {
+  max-height: min(34vh, 260px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.sidebar-toggle { width: 100%; min-height: 44px; border: 0; display: flex; align-items: center; justify-content: space-between; }
+.sidebar-subject-link { min-height: 42px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.drawer-close, .tablet-edge-handle { display: none; }
+
+/* iPad and common Android tablets should use drawer navigation in both orientations. */
+@media (max-width: 1180px), (hover: none) and (pointer: coarse) and (max-width: 1366px) {
+  .app-shell { flex-direction: row; }
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: min(330px, 86vw);
+    height: 100dvh;
+    padding-top: max(14px, env(safe-area-inset-top));
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    transform: translate3d(-106%, 0, 0);
+    transition: transform .24s ease;
+    box-shadow: 22px 0 48px rgba(0,0,0,.28);
+    z-index: 80;
+  }
+  .sidebar.mobile-open { transform: translate3d(0,0,0); }
+  .mobile-overlay { display: block; z-index: 70; backdrop-filter: blur(2px); }
+  .mobile-menu-button {
+    display: grid;
+    place-items: center;
+    left: max(14px, env(safe-area-inset-left));
+    top: max(14px, env(safe-area-inset-top));
+    z-index: 65;
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+    touch-action: manipulation;
+  }
+  .tablet-edge-handle {
+    display: grid;
+    place-items: center;
+    position: fixed;
+    left: 0;
+    top: 42%;
+    z-index: 64;
+    width: 22px;
+    height: 68px;
+    padding: 0;
+    border: 0;
+    border-radius: 0 13px 13px 0;
+    color: white;
+    background: rgba(23,29,54,.92);
+    box-shadow: 5px 0 18px rgba(0,0,0,.2);
+    font-size: 22px;
+    touch-action: manipulation;
+  }
+  .drawer-close {
+    display: grid;
+    place-items: center;
+    position: absolute;
+    right: 0;
+    top: 8px;
+    width: 34px;
+    height: 34px;
+    border: 0;
+    border-radius: 11px;
+    background: rgba(255,255,255,.08);
+    color: white;
+    font-size: 24px;
+    line-height: 1;
+  }
+  .collapse-button { display: none; }
+  .main { padding: 78px 20px 36px; max-width: 100%; }
+  .sidebar-collapsed .sidebar { width: min(330px, 86vw); }
+  .sidebar-collapsed .brand-copy,
+  .sidebar-collapsed .profile-copy,
+  .sidebar-collapsed .nav-label,
+  .sidebar-collapsed .sidebar-toggle em,
+  .sidebar-collapsed .sidebar-toggle small,
+  .sidebar-collapsed .sidebar-action em { display: initial; }
+  .sidebar-collapsed .brand,
+  .sidebar-collapsed .main-nav a,
+  .sidebar-collapsed .sidebar-action,
+  .sidebar-collapsed .sidebar-toggle { justify-content: initial; }
+  .sidebar-subject-scroll { max-height: none; }
+  .main-nav a, .sidebar-action { min-height: 46px; }
+}
+
+@media (max-width: 620px) {
+  .sidebar { width: min(310px, 90vw); }
+  .main { padding: 74px 12px 28px; }
+  .tablet-edge-handle { height: 58px; top: 46%; }
+}
+
+@media (orientation: landscape) and (max-height: 650px) {
+  .sidebar { gap: 9px; padding-top: 10px; padding-bottom: 8px; }
+  .sidebar-top { gap: 8px; }
+  .brand { padding-bottom: 4px; }
+  .sidebar-profile { padding: 8px; }
+  .main-nav a { padding-top: 8px; padding-bottom: 8px; min-height: 40px; }
+  .sidebar-bottom { padding-top: 6px; }
+  .sidebar-action { padding-top: 7px; padding-bottom: 7px; min-height: 38px; }
+}

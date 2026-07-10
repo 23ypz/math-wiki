@@ -41,6 +41,8 @@ const navItems = [
 function subjectPath(subject: string) { return `/knowledge/subject/${encodeURIComponent(subject)}`; }
 function mistakeSubjectPath(subject: string) { return `/mistakes/subject/${encodeURIComponent(subject)}`; }
 function toggleSidebar() { sidebarCollapsed.value = !sidebarCollapsed.value; localStorage.setItem('sidebar-collapsed', sidebarCollapsed.value ? '1' : '0'); }
+function toggleKnowledge() { knowledgeOpen.value = !knowledgeOpen.value; if (knowledgeOpen.value) mistakesOpen.value = false; }
+function toggleMistakes() { mistakesOpen.value = !mistakesOpen.value; if (mistakesOpen.value) knowledgeOpen.value = false; }
 async function loadSidebarData() {
   if (!isLoggedIn()) return;
   try {
@@ -53,28 +55,34 @@ async function loadSidebarData() {
 function logout() { clearToken(); router.push('/login'); }
 onMounted(loadSidebarData);
 watch(() => route.fullPath, () => { mobileOpen.value = false; loadSidebarData(); });
+watch(mobileOpen, (open) => { document.body.style.overflow = open ? 'hidden' : ''; });
 </script>
 
 <template>
   <div class="app-shell" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
-    <button v-if="isLoggedIn()" class="mobile-menu-button" @click="mobileOpen = !mobileOpen">☰</button>
+    <button v-if="isLoggedIn()" class="mobile-menu-button" aria-label="打开导航" @click="mobileOpen = !mobileOpen">☰</button>
+    <button v-if="isLoggedIn() && !mobileOpen" class="tablet-edge-handle" aria-label="打开导航" @click="mobileOpen = true">›</button>
     <div v-if="mobileOpen" class="mobile-overlay" @click="mobileOpen = false"></div>
     <aside v-if="isLoggedIn()" class="sidebar" :class="{ 'mobile-open': mobileOpen }">
-      <div class="brand"><div class="brand-mark">研</div><div class="brand-copy"><h1>数学一 Wiki</h1><p>YOUR STUDY OS</p></div><button class="collapse-button" @click="toggleSidebar">{{ sidebarCollapsed ? '›' : '‹' }}</button></div>
-      <RouterLink to="/profile" class="sidebar-profile">
-        <div class="mini-avatar" :class="`avatar-${profile?.avatar_style || 'blue'}`">{{ initials }}</div>
-        <div class="profile-copy"><strong>{{ profile?.nickname || 'Math Seeker' }}</strong><small>{{ examDays === null ? '完善个人资料' : examDays >= 0 ? `距离考试 ${examDays} 天` : '新的阶段，继续前进' }}</small></div>
-      </RouterLink>
-      <nav class="main-nav">
-        <RouterLink v-for="item in navItems" :key="item[0]" :to="item[0]"><span class="nav-icon">{{ item[1] }}</span><span class="nav-label">{{ item[2] }}</span></RouterLink>
-      </nav>
-      <div class="sidebar-knowledge">
-        <button class="sidebar-toggle" @click="knowledgeOpen = !knowledgeOpen"><span><b>▦</b><em>知识点科目</em></span><small>{{ knowledgeOpen ? '−' : '+' }}</small></button>
-        <div v-if="knowledgeOpen && !sidebarCollapsed" class="sidebar-subject-scroll"><RouterLink v-for="item in sidebarSubjects" :key="item.subject" :to="subjectPath(item.subject)" class="sidebar-subject-link"><span>{{ item.subject }}</span><small>{{ item.count }}</small></RouterLink></div>
+      <div class="sidebar-top">
+        <div class="brand"><div class="brand-mark">研</div><div class="brand-copy"><h1>数学一 Wiki</h1><p>YOUR STUDY OS</p></div><button class="collapse-button" @click="toggleSidebar">{{ sidebarCollapsed ? '›' : '‹' }}</button><button class="drawer-close" aria-label="关闭导航" @click="mobileOpen = false">×</button></div>
+        <RouterLink to="/profile" class="sidebar-profile">
+          <div class="mini-avatar" :class="`avatar-${profile?.avatar_style || 'blue'}`">{{ initials }}</div>
+          <div class="profile-copy"><strong>{{ profile?.nickname || 'Math Seeker' }}</strong><small>{{ examDays === null ? '完善个人资料' : examDays >= 0 ? `距离考试 ${examDays} 天` : '新的阶段，继续前进' }}</small></div>
+        </RouterLink>
       </div>
-      <div class="sidebar-knowledge">
-        <button class="sidebar-toggle" @click="mistakesOpen = !mistakesOpen"><span><b>◇</b><em>错题分类</em></span><small>{{ mistakesOpen ? '−' : '+' }}</small></button>
-        <div v-if="mistakesOpen && !sidebarCollapsed" class="sidebar-subject-scroll"><RouterLink v-for="item in sidebarMistakeSubjects" :key="item.subject" :to="mistakeSubjectPath(item.subject)" class="sidebar-subject-link"><span>{{ item.subject }}</span><small>{{ item.count }}</small></RouterLink></div>
+      <div class="sidebar-scroll">
+        <nav class="main-nav">
+          <RouterLink v-for="item in navItems" :key="item[0]" :to="item[0]"><span class="nav-icon">{{ item[1] }}</span><span class="nav-label">{{ item[2] }}</span></RouterLink>
+        </nav>
+        <div class="sidebar-knowledge">
+          <button class="sidebar-toggle" @click="toggleKnowledge"><span><b>▦</b><em>知识点科目</em></span><small>{{ knowledgeOpen ? '−' : '+' }}</small></button>
+          <div v-if="knowledgeOpen && !sidebarCollapsed" class="sidebar-subject-scroll"><RouterLink v-for="item in sidebarSubjects" :key="item.subject" :to="subjectPath(item.subject)" class="sidebar-subject-link"><span>{{ item.subject }}</span><small>{{ item.count }}</small></RouterLink></div>
+        </div>
+        <div class="sidebar-knowledge">
+          <button class="sidebar-toggle" @click="toggleMistakes"><span><b>◇</b><em>错题分类</em></span><small>{{ mistakesOpen ? '−' : '+' }}</small></button>
+          <div v-if="mistakesOpen && !sidebarCollapsed" class="sidebar-subject-scroll"><RouterLink v-for="item in sidebarMistakeSubjects" :key="item.subject" :to="mistakeSubjectPath(item.subject)" class="sidebar-subject-link"><span>{{ item.subject }}</span><small>{{ item.count }}</small></RouterLink></div>
+        </div>
       </div>
       <div class="sidebar-bottom">
         <button class="sidebar-action" @click="cycleTheme"><span>◐</span><em>{{ themeMode === 'light' ? '浅色模式' : themeMode === 'dark' ? '深色模式' : '跟随系统' }}</em></button>
