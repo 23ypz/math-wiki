@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS mistakes (
   answer_text TEXT,
   wrong_reason TEXT,
   summary TEXT,
+  tags_json TEXT,
   difficulty TINYINT DEFAULT 3,
   status VARCHAR(50) DEFAULT '待复习',
   next_review_date DATE,

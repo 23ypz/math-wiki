@@ -3,7 +3,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { request } from '../api';
 import { renderMarkdown, typesetMath } from '../markdown';
-import type { Mistake } from '../types';
+import type { Mistake, ReviewRecord } from '../types';
 
 const route = useRoute();
 const router = useRouter();
@@ -11,6 +11,7 @@ const item = ref<Mistake | null>(null);
 const items = ref<Mistake[]>([]);
 const error = ref('');
 const loading = ref(false);
+const reviewRecords = ref<ReviewRecord[]>([]);
 
 const currentId = computed(() => Number(route.params.id));
 const currentSubject = computed(() => item.value?.subject || '未分类');
@@ -31,6 +32,7 @@ const questionHtml = computed(() => renderMarkdown(item.value?.question_text || 
 const answerHtml = computed(() => renderMarkdown(item.value?.answer_text || ''));
 const reasonHtml = computed(() => renderMarkdown(item.value?.wrong_reason || ''));
 const summaryHtml = computed(() => renderMarkdown(item.value?.summary || ''));
+const tags = computed(() => item.value?.tags || []);
 
 function chapterRoute(chapter: string) {
   return `/mistakes/subject/${encodeURIComponent(currentSubject.value)}/chapter/${encodeURIComponent(chapter)}`;
@@ -49,11 +51,13 @@ async function loadDetail() {
   error.value = '';
   loading.value = true;
   try {
-    const [detail] = await Promise.all([
+    const [detail, history] = await Promise.all([
       request<{ item: Mistake }>(`/mistakes/${currentId.value}`),
+      request<{ items: ReviewRecord[] }>(`/review-records?mistake_id=${currentId.value}`),
       items.value.length ? Promise.resolve(null) : loadList()
     ]);
     item.value = detail.item;
+    reviewRecords.value = history.items;
     await nextTick();
     typesetMath();
   } catch (e) {
@@ -132,6 +136,7 @@ onMounted(loadDetail);
               <button class="toc-link" type="button" @click="jumpToSection('mistake-reason')">错因</button>
               <button class="toc-link" type="button" @click="jumpToSection('mistake-summary')">总结</button>
               <button class="toc-link" type="button" @click="jumpToSection('mistake-review')">复习信息</button>
+              <button class="toc-link" type="button" @click="jumpToSection('mistake-history')">复习历史</button>
             </div>
           </div>
         </aside>
@@ -143,6 +148,8 @@ onMounted(loadDetail);
             <span class="badge soft">{{ item.status }}</span>
             <span class="muted">难度 {{ item.difficulty }}/5</span>
           </div>
+
+          <div v-if="tags.length" class="tag-list detail-tags"><span v-for="tag in tags" :key="tag" class="tag-chip readonly">{{ tag }}</span></div>
 
           <div v-if="item.knowledge_title" class="tip detail-tip">
             关联知识点：{{ item.knowledge_title }}
@@ -166,6 +173,16 @@ onMounted(loadDetail);
             <div><span>下次复习</span><strong>{{ item.next_review_date || '未设置' }}</strong></div>
             <div><span>复习次数</span><strong>{{ item.review_count }}</strong></div>
             <div><span>状态</span><strong>{{ item.status }}</strong></div>
+          </div>
+
+          <h2 id="mistake-history" class="detail-section-title">复习历史</h2>
+          <div v-if="reviewRecords.length === 0" class="muted">暂无复习记录。</div>
+          <div v-else class="review-history">
+            <div v-for="record in reviewRecords" :key="record.id" class="review-history-item">
+              <div><strong>{{ record.review_date }}</strong><span class="badge">{{ record.result }}</span></div>
+              <p>{{ record.note || '本次未填写备注' }}</p>
+              <small>下次复习：{{ record.next_review_date || '不再安排' }}</small>
+            </div>
           </div>
         </article>
       </div>

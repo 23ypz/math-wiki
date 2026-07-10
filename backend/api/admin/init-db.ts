@@ -27,6 +27,7 @@ const statements = [
     answer_text TEXT,
     wrong_reason TEXT,
     summary TEXT,
+    tags_json TEXT,
     difficulty TINYINT DEFAULT 3,
     status VARCHAR(50) DEFAULT '待复习',
     next_review_date DATE,
@@ -37,6 +38,7 @@ const statements = [
     INDEX idx_mistakes_user_subject (user_id, subject, chapter),
     INDEX idx_mistakes_user_status (user_id, status)
   )`,
+  `ALTER TABLE mistakes ADD COLUMN IF NOT EXISTS tags_json TEXT`,
   `CREATE TABLE IF NOT EXISTS study_logs (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id VARCHAR(64) NOT NULL,

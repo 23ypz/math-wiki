@@ -27,6 +27,7 @@ export type Mistake = {
   status: string;
   next_review_date: string | null;
   review_count: number;
+  tags?: string[];
   created_at?: string;
   updated_at?: string;
 };
@@ -40,4 +41,14 @@ export type StudyLog = {
   new_mistakes_count: number;
   reviewed_mistakes_count: number;
   summary: string;
+};
+
+export type ReviewRecord = {
+  id: number;
+  mistake_id: number;
+  review_date: string;
+  result: string;
+  note: string;
+  next_review_date: string | null;
+  created_at?: string;
 };

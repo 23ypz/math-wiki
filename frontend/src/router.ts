@@ -9,6 +9,7 @@ import MistakesSubject from './views/MistakesSubject.vue';
 import MistakeDetail from './views/MistakeDetail.vue';
 import StudyLogs from './views/StudyLogs.vue';
 import Reviews from './views/Reviews.vue';
+import Search from './views/Search.vue';
 import { isLoggedIn } from './api';
 
 const router = createRouter({
@@ -25,7 +26,8 @@ const router = createRouter({
     { path: '/mistakes/subject/:subject/chapter/:chapter', component: MistakesSubject, meta: { auth: true } },
     { path: '/mistakes/:id', component: MistakeDetail, meta: { auth: true } },
     { path: '/study-logs', component: StudyLogs, meta: { auth: true } },
-    { path: '/reviews', component: Reviews, meta: { auth: true } }
+    { path: '/reviews', component: Reviews, meta: { auth: true } },
+    { path: '/search', component: Search, meta: { auth: true } }
   ]
 });
 

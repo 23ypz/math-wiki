@@ -91,6 +91,7 @@ watch(() => route.fullPath, () => {
         <RouterLink to="/mistakes">错题本</RouterLink>
         <RouterLink to="/reviews">今日复习</RouterLink>
         <RouterLink to="/study-logs">学习日志</RouterLink>
+        <RouterLink to="/search">全局搜索</RouterLink>
       </nav>
 
       <div class="sidebar-knowledge">
