@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { request } from '../api';
-import type { ExamScore, KnowledgePoint, Mistake, ReviewRecord, StudyGoal, StudyLog, TodoItem } from '../types';
+import type { ExamScore, KnowledgePoint, Mistake, ReviewRecord, StudyGoal, StudyLog, TodoItem, UserProfile } from '../types';
 
 const loading = ref(true);
 const exporting = ref(false);
@@ -93,20 +93,21 @@ function download(filename: string, content: string, type = 'application/json;ch
 }
 
 async function fetchBackupData() {
-  const [knowledge, mistakes, studyLogs, exams, goals, todos] = await Promise.all([
+  const [knowledge, mistakes, studyLogs, exams, goals, todos, profile] = await Promise.all([
     request<{ items: KnowledgePoint[] }>('/knowledge'),
     request<{ items: Mistake[] }>('/mistakes?sort=created_asc'),
     request<{ items: StudyLog[] }>('/study-logs'),
     request<{ items: ExamScore[] }>('/progress?resource=exams'),
     request<{ items: StudyGoal[] }>('/progress?resource=goals'),
-    request<{ items: TodoItem[] }>('/progress?resource=todos')
+    request<{ items: TodoItem[] }>('/progress?resource=todos'),
+    request<{ item: UserProfile }>('/progress?resource=profile')
   ]);
   const reviewGroups = await Promise.all(mistakes.items.map(async (item) => {
     const res = await request<{ items: ReviewRecord[] }>(`/review-records?mistake_id=${item.id}`);
     return res.items;
   }));
   return {
-    version: 11,
+    version: 12,
     exported_at: new Date().toISOString(),
     knowledge_points: knowledge.items,
     mistakes: mistakes.items,
@@ -114,6 +115,7 @@ async function fetchBackupData() {
     exam_scores: exams.items,
     study_goals: goals.items,
     todo_items: todos.items,
+    user_profile: profile.item,
     review_records: reviewGroups.flat()
   };
 }
@@ -123,7 +125,7 @@ async function exportJson() {
   error.value = '';
   try {
     const backup = await fetchBackupData();
-    download(`math-wiki-v11-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(backup, null, 2));
+    download(`math-wiki-v12-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(backup, null, 2));
   } catch (e) {
     error.value = e instanceof Error ? e.message : '导出失败';
   } finally {
@@ -154,7 +156,7 @@ async function exportMarkdown() {
     for (const item of backup.study_goals) lines.push('', `### ${item.title}`, `- 类型：${item.goal_type}`, `- 状态：${item.status}`, `- 进度：${item.current_value}/${item.target_value}`, `- 截止日期：${item.deadline || '未设置'}`, '', item.note || '');
     lines.push('', '## 六、Todo 计划');
     for (const item of backup.todo_items) lines.push('', `### ${item.todo_date} ${item.title}`, `- 时间：${item.start_time || '未设置'}`, `- 类型：${item.task_type}`, `- 科目：${item.subject || '未分类'}`, `- 章节：${item.chapter || '未填写'}`, `- 优先级：${item.priority}`, `- 状态：${item.status}`, '', item.note || '');
-    download(`math-wiki-v11-export-${new Date().toISOString().slice(0, 10)}.md`, lines.join('\n'), 'text/markdown;charset=utf-8');
+    download(`math-wiki-v12-export-${new Date().toISOString().slice(0, 10)}.md`, lines.join('\n'), 'text/markdown;charset=utf-8');
   } catch (e) {
     error.value = e instanceof Error ? e.message : '导出失败';
   } finally {
@@ -163,13 +165,14 @@ async function exportMarkdown() {
 }
 
 async function deleteCurrentData() {
-  const [knowledge, mistakes, studyLogs, exams, goals, todos] = await Promise.all([
+  const [knowledge, mistakes, studyLogs, exams, goals, todos, profile] = await Promise.all([
     request<{ items: KnowledgePoint[] }>('/knowledge'),
     request<{ items: Mistake[] }>('/mistakes'),
     request<{ items: StudyLog[] }>('/study-logs'),
     request<{ items: ExamScore[] }>('/progress?resource=exams'),
     request<{ items: StudyGoal[] }>('/progress?resource=goals'),
-    request<{ items: TodoItem[] }>('/progress?resource=todos')
+    request<{ items: TodoItem[] }>('/progress?resource=todos'),
+    request<{ item: UserProfile }>('/progress?resource=profile')
   ]);
   for (const item of mistakes.items) await request(`/mistakes/${item.id}`, { method: 'DELETE' });
   for (const item of knowledge.items) await request(`/knowledge/${item.id}`, { method: 'DELETE' });

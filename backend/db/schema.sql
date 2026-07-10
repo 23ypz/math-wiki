@@ -117,3 +117,21 @@ CREATE TABLE IF NOT EXISTS todo_items (
   INDEX idx_todo_user_date (user_id, todo_date),
   INDEX idx_todo_user_status (user_id, status)
 );
+
+CREATE TABLE IF NOT EXISTS user_profile (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id VARCHAR(64) NOT NULL UNIQUE,
+  nickname VARCHAR(100) DEFAULT 'Math Seeker',
+  avatar_style VARCHAR(50) DEFAULT 'blue',
+  signature VARCHAR(255),
+  target_school VARCHAR(255),
+  target_major VARCHAR(255),
+  exam_year INT,
+  preparation_start_date DATE,
+  exam_date DATE,
+  daily_target_minutes INT DEFAULT 300,
+  math_target_score DECIMAL(6,2) DEFAULT 120,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+

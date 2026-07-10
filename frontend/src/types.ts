@@ -99,3 +99,19 @@ export type TodoItem = {
   created_at?: string;
   updated_at?: string;
 };
+
+export type UserProfile = {
+  id?: number;
+  nickname: string;
+  avatar_style: string;
+  signature: string;
+  target_school: string;
+  target_major: string;
+  exam_year: number | null;
+  preparation_start_date: string | null;
+  exam_date: string | null;
+  daily_target_minutes: number;
+  math_target_score: number;
+  created_at?: string;
+  updated_at?: string;
+};

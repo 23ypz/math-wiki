@@ -13,10 +13,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!user) return;
 
   const kind = resource(req);
-  if (!['exams', 'goals', 'todos'].includes(kind)) return badRequest(res, 'resource must be exams, goals or todos.');
+  if (!['exams', 'goals', 'todos', 'profile'].includes(kind)) return badRequest(res, 'resource must be exams, goals, todos or profile.');
 
   try {
     if (req.method === 'GET') {
+      if (kind === 'profile') {
+        const items = await rows(
+          `SELECT id, nickname, avatar_style, signature, target_school, target_major, exam_year,
+                  preparation_start_date, exam_date, daily_target_minutes, math_target_score,
+                  created_at, updated_at
+           FROM user_profile WHERE user_id = ? LIMIT 1`,
+          [user.userId]
+        );
+        const item = items[0] || {
+          nickname: 'Math Seeker', avatar_style: 'blue', signature: '稳扎稳打，每天进步一点。',
+          target_school: '', target_major: '', exam_year: null, preparation_start_date: null,
+          exam_date: null, daily_target_minutes: 300, math_target_score: 120
+        };
+        return ok(res, { item });
+      }
       if (kind === 'exams') {
         const items = await rows(
           `SELECT id, exam_name, exam_type, exam_date, total_score, calculus_score,
@@ -105,6 +120,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
          asString(data.note), status]
       );
       return created(res, { id: result.insertId });
+    }
+
+    if (kind === 'profile' && req.method === 'PUT') {
+      const values = [
+        user.userId, asString(data.nickname, 'Math Seeker'), asString(data.avatar_style, 'blue'),
+        asString(data.signature), asString(data.target_school), asString(data.target_major),
+        asInt(data.exam_year), asString(data.preparation_start_date), asString(data.exam_date),
+        asInt(data.daily_target_minutes) || 300, Number(data.math_target_score) || 120
+      ];
+      await exec(
+        `INSERT INTO user_profile
+         (user_id, nickname, avatar_style, signature, target_school, target_major, exam_year,
+          preparation_start_date, exam_date, daily_target_minutes, math_target_score)
+         VALUES (?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''), NULLIF(?, ''), ?, ?)
+         ON DUPLICATE KEY UPDATE nickname = VALUES(nickname), avatar_style = VALUES(avatar_style),
+          signature = VALUES(signature), target_school = VALUES(target_school), target_major = VALUES(target_major),
+          exam_year = VALUES(exam_year), preparation_start_date = VALUES(preparation_start_date),
+          exam_date = VALUES(exam_date), daily_target_minutes = VALUES(daily_target_minutes),
+          math_target_score = VALUES(math_target_score)`,
+        values
+      );
+      return ok(res);
     }
 
     if (!Number.isFinite(id)) return badRequest(res, 'id is required.');

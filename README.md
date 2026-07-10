@@ -27,3 +27,12 @@
 2. Vercel 项目 Root Directory 保持 `backend`。
 3. 等 Vercel 部署完成后调用 `/api/admin/init-db`。
 4. GitHub Actions 自动部署 `frontend` 到 GitHub Pages。
+
+## v12：个人中心与界面焕新
+
+- 新增个人中心：昵称、预设头像、签名、目标院校/专业、考试日期、每日目标与数学目标分数。
+- 新增备考概览：备考天数、累计学习时长、知识点、错题、复习、Todo 和最高成绩。
+- 全站视觉升级：渐变品牌、现代卡片、统一表单和按钮、深色模式。
+- 左侧导航支持收起，移动端使用抽屉式导航。
+- 新增 Toast 操作反馈；主题选择保存在浏览器中。
+- 个人资料复用 `/api/progress?resource=profile`，没有增加 Vercel Function 数量。
