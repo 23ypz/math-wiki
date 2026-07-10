@@ -5,6 +5,7 @@ import { unauthorized } from './http.js';
 export type AuthUser = {
   userId: string;
   email: string;
+  role: 'admin' | 'guest';
 };
 
 function jwtSecret(): string {
@@ -15,7 +16,7 @@ function jwtSecret(): string {
 
 export function signToken(user: AuthUser): string {
   return jwt.sign(
-    { email: user.email },
+    { email: user.email, role: user.role },
     jwtSecret(),
     { subject: user.userId, expiresIn: '7d' }
   );
@@ -25,10 +26,11 @@ export function verifyToken(token: string): AuthUser {
   const decoded = jwt.verify(token, jwtSecret()) as jwt.JwtPayload;
   const userId = decoded.sub;
   const email = decoded.email;
+  const role = decoded.role === 'guest' ? 'guest' : 'admin';
   if (!userId || typeof email !== 'string') {
     throw new Error('Invalid token payload.');
   }
-  return { userId, email };
+  return { userId, email, role };
 }
 
 export function requireUser(req: VercelRequest, res: VercelResponse): AuthUser | undefined {
@@ -39,7 +41,13 @@ export function requireUser(req: VercelRequest, res: VercelResponse): AuthUser |
   }
 
   try {
-    return verifyToken(header.slice('Bearer '.length));
+    const user = verifyToken(header.slice('Bearer '.length));
+    const method = String(req.method || 'GET').toUpperCase();
+    if (user.role === 'guest' && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+      res.status(403).json({ error: '游客模式仅支持浏览，不能保存或修改内容。' });
+      return undefined;
+    }
+    return user;
   } catch {
     unauthorized(res, 'Invalid or expired token.');
     return undefined;

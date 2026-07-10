@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { request } from '../api';
+import { isGuest, request } from '../api';
 import type { ExamScore, KnowledgePoint, Mistake, ReviewRecord, StudyGoal, StudyLog, TodoItem, UserProfile } from '../types';
 
+const guest = isGuest();
 const loading = ref(true);
 const exporting = ref(false);
 const importing = ref(false);
@@ -247,7 +248,7 @@ onMounted(load);
   <section>
     <div class="page-title">
       <div><h2>学习总览</h2><p>用数据看清数学一复习进度和薄弱环节。</p></div>
-      <div class="actions"><button class="secondary" @click="load">刷新</button><button class="secondary" :disabled="exporting" @click="exportJson">导出 JSON</button><button class="secondary" :disabled="exporting" @click="exportMarkdown">导出 Markdown</button></div>
+      <div class="actions"><button class="secondary" @click="load">刷新</button><template v-if="!guest"><button class="secondary" :disabled="exporting" @click="exportJson">导出 JSON</button><button class="secondary" :disabled="exporting" @click="exportMarkdown">导出 Markdown</button></template></div>
     </div>
     <p v-if="error" class="error">{{ error }}</p><p v-if="loading">加载中...</p>
 
@@ -283,7 +284,7 @@ onMounted(load);
 
     <div class="card" style="margin-top:16px"><h3>下一步复习建议</h3><p v-if="data.overdueCount > 0">你有 {{ data.overdueCount }} 道错题已经逾期，建议先进入“今日复习”清理逾期内容。</p><p v-else-if="data.dueCount > 0">今天有 {{ data.dueCount }} 道错题待复习，完成后再复盘薄弱知识点。</p><p v-else-if="data.weakKnowledge.length">今天没有到期错题，可以优先复盘“{{ data.weakKnowledge[0].title }}”。</p><p v-else>今天没有到期错题，建议继续整理新知识点或完成一组章节练习。</p></div>
 
-    <div class="card" style="margin-top:16px">
+    <div v-if="!guest" class="card" style="margin-top:16px">
       <h3>JSON 备份恢复</h3><p class="muted">合并模式保留现有数据；覆盖模式会先删除现有知识点、错题、学习日志、成绩、目标和 Todo。</p>
       <div class="import-row"><select v-model="importMode"><option value="merge">合并导入</option><option value="overwrite">覆盖导入</option></select><label class="link-button secondary-link file-button">{{ importing ? '正在导入...' : '选择 JSON 备份' }}<input type="file" accept="application/json,.json" :disabled="importing" @change="importBackup" /></label></div>
       <p v-if="importSummary" class="success-message">{{ importSummary }}</p>

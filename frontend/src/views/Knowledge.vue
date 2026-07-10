@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { request } from '../api';
+import { isGuest, request } from '../api';
 import { renderMarkdown, stripMarkdown, typesetMath } from '../markdown';
 import type { KnowledgePoint } from '../types';
 
+const guest = isGuest();
 const router = useRouter();
 const route = useRoute();
 const items = ref<KnowledgePoint[]>([]);
@@ -149,7 +150,7 @@ onMounted(async () => {
 
     <p v-if="error" class="error">{{ error }}</p>
 
-    <div class="grid grid-2">
+    <div v-if="!guest" class="grid grid-2">
       <div class="card">
         <div class="card-head">
           <div>
@@ -217,8 +218,8 @@ onMounted(async () => {
             <td>
               <div class="actions nowrap-actions">
                 <RouterLink class="link-button primary-link" :to="`/knowledge/${item.id}`">预览</RouterLink>
-                <button class="secondary" @click="edit(item)">编辑</button>
-                <button class="danger" @click="remove(item.id)">删除</button>
+                <template v-if="!guest"><button class="secondary" @click="edit(item)">编辑</button>
+                <button class="danger" @click="remove(item.id)">删除</button></template>
               </div>
             </td>
           </tr>

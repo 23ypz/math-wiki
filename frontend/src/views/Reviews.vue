@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
-import { request } from '../api';
+import { isGuest, request } from '../api';
 import type { Mistake } from '../types';
 
+const guest = isGuest();
 const items = ref<Mistake[]>([]);
 const error = ref('');
 const savingId = ref<number | null>(null);
@@ -119,7 +120,7 @@ onMounted(load);
         <p><strong>总结：</strong>{{ item.summary || '未填写' }}</p>
         <p class="tip">原定复习日期：{{ item.next_review_date || '未设置' }}。{{ suggestion(item) }}</p>
 
-        <div class="review-result-buttons">
+        <div v-if="!guest" class="review-result-buttons">
           <button type="button" :class="{ active: form[item.id].result === '还是不会' }" @click="form[item.id].result = '还是不会'; applyInterval(item)">还是不会</button>
           <button type="button" :class="{ active: form[item.id].result === '还有点卡' }" @click="form[item.id].result = '还有点卡'; applyInterval(item)">还有点卡</button>
           <button type="button" :class="{ active: form[item.id].result === '完全会了' }" @click="form[item.id].result = '完全会了'; applyInterval(item)">完全会了</button>

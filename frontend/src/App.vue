@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { clearToken, isLoggedIn, request } from './api';
+import { clearToken, isGuest, isLoggedIn, request } from './api';
 import { cycleTheme, themeMode } from './theme';
 import { toasts } from './toast';
 import type { KnowledgePoint, Mistake, UserProfile } from './types';
@@ -15,6 +15,7 @@ const knowledgeOpen = ref(route.path.startsWith('/knowledge/subject') || /^\/kno
 const mistakesOpen = ref(route.path.startsWith('/mistakes/subject') || /^\/mistakes\/\d+/.test(route.path));
 const sidebarCollapsed = ref(localStorage.getItem('sidebar-collapsed') === '1');
 const mobileOpen = ref(false);
+const guestMode = ref(isGuest());
 const knowledgeSection = ref<HTMLElement | null>(null);
 const mistakesSection = ref<HTMLElement | null>(null);
 const defaultSubjects = ['高等数学', '线性代数', '概率论与数理统计'];
@@ -72,14 +73,14 @@ async function loadSidebarData() {
     sidebarKnowledge.value = knowledgeRes.items; sidebarMistakes.value = mistakeRes.items; profile.value = profileRes.item;
   } catch { sidebarKnowledge.value = []; sidebarMistakes.value = []; }
 }
-function logout() { clearToken(); router.push('/login'); }
+function leaveSession() { clearToken(); guestMode.value = false; router.push('/login'); }
 onMounted(loadSidebarData);
-watch(() => route.fullPath, () => { mobileOpen.value = false; loadSidebarData(); });
+watch(() => route.fullPath, () => { mobileOpen.value = false; guestMode.value = isGuest(); loadSidebarData(); });
 watch(mobileOpen, (open) => { document.body.style.overflow = open ? 'hidden' : ''; });
 </script>
 
 <template>
-  <div class="app-shell" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
+  <div class="app-shell" :class="{ 'sidebar-collapsed': sidebarCollapsed, 'guest-mode': guestMode }">
     <button v-if="isLoggedIn()" class="mobile-menu-button" aria-label="打开导航" @click="mobileOpen = !mobileOpen">☰</button>
     <button v-if="isLoggedIn() && !mobileOpen" class="tablet-edge-handle" aria-label="打开导航" @click="mobileOpen = true">›</button>
     <div v-if="mobileOpen" class="mobile-overlay" @click="mobileOpen = false"></div>
@@ -88,7 +89,7 @@ watch(mobileOpen, (open) => { document.body.style.overflow = open ? 'hidden' : '
         <div class="brand"><div class="brand-mark">研</div><div class="brand-copy"><h1>数学一 Wiki</h1><p>YOUR STUDY OS</p></div><button class="collapse-button" @click="toggleSidebar">{{ sidebarCollapsed ? '›' : '‹' }}</button><button class="drawer-close" aria-label="关闭导航" @click="mobileOpen = false">×</button></div>
         <RouterLink to="/profile" class="sidebar-profile">
           <div class="mini-avatar" :class="`avatar-${profile?.avatar_style || 'blue'}`">{{ initials }}</div>
-          <div class="profile-copy"><strong>{{ profile?.nickname || 'Math Seeker' }}</strong><small>{{ examDays === null ? '完善个人资料' : examDays >= 0 ? `距离考试 ${examDays} 天` : '新的阶段，继续前进' }}</small></div>
+          <div class="profile-copy"><strong>{{ guestMode ? '游客浏览' : (profile?.nickname || 'Math Seeker') }}</strong><small>{{ guestMode ? '只读模式 · 数据不会被修改' : (examDays === null ? '完善个人资料' : examDays >= 0 ? `距离考试 ${examDays} 天` : '新的阶段，继续前进') }}</small></div>
         </RouterLink>
       </div>
       <div class="sidebar-scroll">
@@ -107,10 +108,16 @@ watch(mobileOpen, (open) => { document.body.style.overflow = open ? 'hidden' : '
       <div class="sidebar-bottom">
         <button class="sidebar-action" @click="cycleTheme"><span>◐</span><em>{{ themeMode === 'light' ? '浅色模式' : themeMode === 'dark' ? '深色模式' : '跟随系统' }}</em></button>
         <RouterLink to="/profile" class="sidebar-action"><span>◎</span><em>个人中心</em></RouterLink>
-        <button class="sidebar-action danger-text" @click="logout"><span>↪</span><em>退出登录</em></button>
+        <button class="sidebar-action danger-text" @click="leaveSession"><span>↪</span><em>{{ guestMode ? '退出游客模式' : '退出登录' }}</em></button>
       </div>
     </aside>
-    <main class="main" :class="{ 'main-full-bleed': route.path === '/login' }"><RouterView /></main>
+    <main class="main" :class="{ 'main-full-bleed': route.path === '/login' }">
+      <div v-if="guestMode && route.path !== '/login'" class="guest-banner">
+        <span><b>游客模式</b> 当前仅可浏览，新增、编辑、删除和导入操作均已锁定。</span>
+        <button type="button" @click="leaveSession">管理员登录</button>
+      </div>
+      <RouterView />
+    </main>
     <div class="toast-stack"><div v-for="toast in toasts" :key="toast.id" class="toast" :class="toast.kind">{{ toast.message }}</div></div>
   </div>
 </template>

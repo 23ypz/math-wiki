@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { request } from '../api';
+import { isGuest, request } from '../api';
 import { showToast } from '../toast';
 import type { ExamScore, KnowledgePoint, Mistake, ReviewRecord, StudyLog, TodoItem, UserProfile } from '../types';
 
+const guest = isGuest();
 const loading = ref(true);
 const saving = ref(false);
 const error = ref('');
@@ -71,7 +72,7 @@ onMounted(load);
   <section>
     <div class="page-title profile-title">
       <div><span class="eyebrow">PERSONAL SPACE</span><h2>个人中心</h2><p>记录你的目标，让每一次学习都更有方向。</p></div>
-      <button class="primary" :disabled="saving" @click="save">{{ saving ? '保存中…' : '保存资料' }}</button>
+      <button v-if="!guest" class="primary" :disabled="saving" @click="save">{{ saving ? '保存中…' : '保存资料' }}</button>
     </div>
     <div v-if="error" class="error">{{ error }}</div>
     <div v-if="loading" class="card skeleton-card">正在加载个人资料…</div>
@@ -94,7 +95,7 @@ onMounted(load);
       </div>
 
       <div class="profile-layout">
-        <form class="card form profile-form" @submit.prevent="save">
+        <form v-if="!guest" class="card form profile-form" @submit.prevent="save">
           <div class="card-head"><div><span class="eyebrow">PROFILE</span><h3>基本信息</h3></div></div>
           <div class="form-row"><label>昵称<input v-model="form.nickname" maxlength="100" /></label><label>头像风格<select v-model="form.avatar_style"><option v-for="item in avatarStyles" :key="item.value" :value="item.value">{{ item.label }}</option></select></label></div>
           <label>个性签名<input v-model="form.signature" maxlength="255" placeholder="稳扎稳打，每天进步一点。" /></label>

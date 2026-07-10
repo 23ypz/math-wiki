@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
-import { request } from '../api';
+import { isGuest, request } from '../api';
 import type { TodoItem } from '../types';
 
+const guest = isGuest();
 const todos = ref<TodoItem[]>([]);
 const loading = ref(true);
 const saving = ref(false);
@@ -238,19 +239,19 @@ onMounted(load);
           <div class="card-head"><div><h3>{{ selectedDate }} 的计划</h3><p class="muted">{{ selectedCompleted }} / {{ selectedTodos.length }} 已完成</p></div></div>
           <div class="todo-list">
             <div v-for="item in selectedTodos" :key="item.id" class="todo-item" :class="{ completed: item.status === '已完成' }">
-              <button class="todo-check" type="button" @click="toggleDone(item)">{{ item.status === '已完成' ? '✓' : '' }}</button>
+              <button class="todo-check" type="button" :disabled="guest" @click="toggleDone(item)">{{ item.status === '已完成' ? '✓' : '' }}</button>
               <div class="todo-item-body">
                 <div class="todo-item-title"><strong>{{ item.title }}</strong><span class="badge" :class="priorityClass(item.priority)">{{ item.priority }}</span></div>
                 <p>{{ item.start_time ? String(item.start_time).slice(0, 5) : '未设时间' }} · {{ item.task_type }}<template v-if="item.subject"> · {{ item.subject }}</template><template v-if="item.chapter"> / {{ item.chapter }}</template></p>
                 <small v-if="item.note">{{ item.note }}</small>
-                <div class="todo-item-actions"><button class="link-button" @click="editTodo(item)">编辑</button><button class="link-button" @click="postpone(item)">延期到明天</button><button class="danger-link" @click="removeTodo(item.id)">删除</button></div>
+                <div v-if="!guest" class="todo-item-actions"><button class="link-button" @click="editTodo(item)">编辑</button><button class="link-button" @click="postpone(item)">延期到明天</button><button class="danger-link" @click="removeTodo(item.id)">删除</button></div>
               </div>
             </div>
             <p v-if="!selectedTodos.length" class="muted">这一天还没有计划，使用下方表单添加。</p>
           </div>
         </div>
 
-        <div class="card todo-form-card">
+        <div v-if="!guest" class="card todo-form-card">
           <h3>{{ editingId ? '编辑 Todo' : '添加 Todo' }}</h3>
           <label>任务标题<input v-model="form.title" placeholder="例如：完成极限章节练习 30 题" /></label>
           <div class="form-row"><label>日期<input v-model="form.todo_date" type="date" /></label><label>开始时间（可选）<input v-model="form.start_time" type="time" /></label></div>

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
-import { request } from '../api';
+import { isGuest, request } from '../api';
 import type { StudyLog } from '../types';
 
+const guest = isGuest();
 const items = ref<StudyLog[]>([]);
 const error = ref('');
 const editingId = ref<number | null>(null);
@@ -100,7 +101,7 @@ onMounted(load);
             <td>{{ Math.round(item.duration_minutes / 60 * 10) / 10 }}h</td>
             <td>新增 {{ item.new_mistakes_count }} / 复习 {{ item.reviewed_mistakes_count }}</td>
             <td>{{ (item.content || item.summary || '').slice(0, 100) }}</td>
-            <td><div class="actions"><button class="secondary" @click="edit(item)">编辑</button><button class="danger" @click="remove(item.id)">删除</button></div></td>
+            <td><div v-if="!guest" class="actions"><button class="secondary" @click="edit(item)">编辑</button><button class="danger" @click="remove(item.id)">删除</button></div><span v-else class="muted">只读</span></td>
           </tr>
         </tbody>
       </table>

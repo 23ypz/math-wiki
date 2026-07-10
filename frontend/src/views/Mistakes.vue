@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { request } from '../api';
+import { isGuest, request } from '../api';
 import { renderMarkdown, typesetMath } from '../markdown';
 import type { KnowledgePoint, Mistake } from '../types';
 
+const guest = isGuest();
 const route = useRoute();
 const items = ref<Mistake[]>([]);
 const knowledgeItems = ref<KnowledgePoint[]>([]);
@@ -241,13 +242,13 @@ onMounted(async () => {
       </div>
       <div class="actions">
         <RouterLink class="link-button secondary-link" to="/mistakes/print">打印错题本</RouterLink>
-        <button type="button" :class="quickMode ? 'primary' : 'secondary'" @click="quickMode = !quickMode">{{ quickMode ? '退出快速模式' : '快速录题' }}</button>
+        <button v-if="!guest" type="button" :class="quickMode ? 'primary' : 'secondary'" @click="quickMode = !quickMode">{{ quickMode ? '退出快速模式' : '快速录题' }}</button>
       </div>
     </div>
 
     <p v-if="error" class="error">{{ error }}</p>
 
-    <div class="grid grid-2">
+    <div v-if="!guest" class="grid grid-2">
       <div class="card">
         <div class="card-head"><div><h3>{{ editingId ? '编辑错题' : (quickMode ? '快速录题' : '新增错题') }}</h3><p v-if="quickMode && !editingId" class="muted small-text">只填写核心内容，其他字段以后再补充。</p></div><span v-if="draftMessage" class="muted small-text">{{ draftMessage }}</span></div>
         <form class="form" @submit.prevent="save()">
@@ -311,7 +312,7 @@ onMounted(async () => {
             <td>{{ item.status }}</td>
             <td>下次：{{ item.next_review_date || '未设置' }}<br>次数：{{ item.review_count }}</td>
             <td>{{ (item.wrong_reason || '').slice(0, 80) }}</td>
-            <td><div class="actions nowrap-actions"><RouterLink class="link-button primary-link" :to="`/mistakes/${item.id}`">预览</RouterLink><button class="secondary" @click="edit(item)">编辑</button><button class="danger" @click="remove(item.id)">删除</button></div></td>
+            <td><div class="actions nowrap-actions"><RouterLink class="link-button primary-link" :to="`/mistakes/${item.id}`">预览</RouterLink><template v-if="!guest"><button class="secondary" @click="edit(item)">编辑</button><button class="danger" @click="remove(item.id)">删除</button></template></div></td>
           </tr>
         </tbody>
       </table>

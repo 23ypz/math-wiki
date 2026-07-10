@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { login, setToken } from '../api';
+import { guestLogin, login, setToken } from '../api';
 
 const router = useRouter();
 const email = ref('');
 const password = ref('');
 const loading = ref(false);
+const guestLoading = ref(false);
 const error = ref('');
 const loginOpen = ref(false);
 const showPassword = ref(false);
@@ -40,6 +41,21 @@ async function submit() {
     error.value = e instanceof Error ? e.message : '登录失败，请检查账号或网络连接。';
   } finally {
     loading.value = false;
+  }
+}
+
+
+async function enterGuestMode() {
+  guestLoading.value = true;
+  error.value = '';
+  try {
+    const result = await guestLogin();
+    setToken(result.token, 'guest');
+    router.push('/');
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '游客模式进入失败，请稍后重试。';
+  } finally {
+    guestLoading.value = false;
   }
 }
 
@@ -107,6 +123,7 @@ onBeforeUnmount(() => {
         <button type="button" @click="scrollToSection('features')">学习工具</button>
         <button type="button" @click="scrollToSection('workflow')">学习流程</button>
         <button type="button" @click="scrollToSection('subjects')">数学体系</button>
+        <button class="nav-guest" type="button" :disabled="guestLoading" @click="enterGuestMode">{{ guestLoading ? '进入中…' : '游客浏览' }}</button>
         <button class="nav-login" type="button" @click="openLogin">登录系统</button>
       </nav>
     </header>
@@ -133,6 +150,7 @@ onBeforeUnmount(() => {
             登录进入学习系统
             <span>→</span>
           </button>
+          <button class="hero-guest" type="button" :disabled="guestLoading" @click="enterGuestMode">{{ guestLoading ? '进入中…' : '游客浏览系统' }} <span>→</span></button>
           <button type="button" @click="scrollToSection('features')">查看知识点体系 <span>→</span></button>
           <button type="button" @click="scrollToSection('workflow')">了解错题复习流程 <span>→</span></button>
           <button type="button" @click="scrollToSection('subjects')">浏览数学一科目 <span>→</span></button>
@@ -237,7 +255,10 @@ onBeforeUnmount(() => {
           <article><b>4</b><h3>观察进步</h3><p>通过统计、成绩和复习历史持续调整重点。</p></article>
         </div>
 
-        <button class="bottom-login" data-reveal type="button" @click="openLogin">登录并开始整理数学知识库 →</button>
+        <div class="bottom-entry-actions" data-reveal>
+          <button class="bottom-login" type="button" @click="openLogin">登录并开始整理数学知识库 →</button>
+          <button class="bottom-guest" type="button" :disabled="guestLoading" @click="enterGuestMode">{{ guestLoading ? '进入中…' : '先以游客身份浏览' }}</button>
+        </div>
       </section>
     </main>
 
