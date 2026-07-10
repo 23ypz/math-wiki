@@ -1353,3 +1353,63 @@ input:focus,textarea:focus,select:focus { outline:none;border-color:#818cf8;box-
   .guest-banner span { line-height: 1.5; }
   .guest-banner button { flex: 0 0 auto; }
 }
+
+
+/* v11 guest framework preview and single-scroll landing fixes */
+html.landing-active,
+body.landing-active {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+}
+body.landing-active {
+  overflow-y: auto;
+  overscroll-behavior-y: none;
+}
+body.landing-active #app,
+body.landing-active .app-shell,
+body.landing-active .main.main-full-bleed {
+  width: 100%;
+  min-height: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.guest-framework-grid.is-readonly .card {
+  position: relative;
+  border-color: rgba(245, 158, 11, .22);
+}
+.readonly-hint {
+  display: block;
+  margin-top: 6px;
+  color: #a16207;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.guest-form-fieldset {
+  display: contents;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.guest-framework-grid.is-readonly input:disabled,
+.guest-framework-grid.is-readonly select:disabled,
+.guest-framework-grid.is-readonly textarea:disabled,
+.guest-framework-grid.is-readonly textarea[readonly] {
+  opacity: 1;
+  color: var(--text);
+  -webkit-text-fill-color: var(--text);
+  background: color-mix(in srgb, var(--card-solid) 86%, #fef3c7 14%);
+  cursor: not-allowed;
+}
+.guest-framework-grid.is-readonly button:disabled {
+  cursor: not-allowed;
+  opacity: .58;
+}
+.guest-framework-grid.is-readonly .preview-scroll {
+  min-height: 360px;
+}
+@media (max-width: 900px) {
+  .guest-framework-grid.is-readonly .preview-scroll { min-height: 260px; }
+}

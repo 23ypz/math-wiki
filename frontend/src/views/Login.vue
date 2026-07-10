@@ -94,10 +94,14 @@ watch(loginOpen, (open) => {
 });
 
 onMounted(() => {
+  document.documentElement.classList.add('landing-active');
+  document.body.classList.add('landing-active');
   window.addEventListener('keydown', onKeydown);
   nextTick(setupRevealAnimations);
 });
 onBeforeUnmount(() => {
+  document.documentElement.classList.remove('landing-active');
+  document.body.classList.remove('landing-active');
   window.removeEventListener('keydown', onKeydown);
   revealObserver?.disconnect();
   document.body.style.overflow = '';
@@ -323,7 +327,8 @@ onBeforeUnmount(() => {
   min-height: 100vh;
   color: var(--landing-white);
   background: var(--landing-bg);
-  overflow-x: hidden;
+  overflow-x: clip;
+  overflow-y: visible;
   position: relative;
 }
 
@@ -706,6 +711,7 @@ onBeforeUnmount(() => {
     transform .9s cubic-bezier(.16,.8,.22,1);
   will-change: opacity, transform;
 }
+[data-reveal].is-visible { will-change: auto; }
 [data-reveal].is-visible {
   opacity: 1;
   transform: translate3d(0, 0, 0);
@@ -828,6 +834,26 @@ onBeforeUnmount(() => {
   .workflow-line { grid-template-columns: 1fr; }
   .landing-footer { flex-direction: column; align-items: flex-start; }
   .login-modal { padding: 27px 20px 24px; border-radius: 20px; }
+}
+
+
+@media (max-width: 900px), (hover: none) and (pointer: coarse) {
+  .landing-header {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(4, 16, 31, .96);
+  }
+  .star-layer-one,
+  .star-layer-two,
+  .hero-glow { animation: none !important; }
+  .landing-section {
+    content-visibility: auto;
+    contain-intrinsic-size: 780px;
+  }
+  [data-reveal] {
+    transition-duration: .62s;
+    transform: translate3d(0, 28px, 0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -59,6 +59,7 @@ watch([questionPreview, answerPreview, wrongReasonPreview, summaryPreview], () =
 }, { flush: 'post' });
 
 watch(form, () => {
+  if (guest) return;
   const hasContent = [form.title, form.chapter, form.source, form.question_text, form.answer_text, form.wrong_reason, form.summary, ...form.tags]
     .some((value) => String(value ?? '').trim() !== '');
   if (!hasContent) {
@@ -70,6 +71,7 @@ watch(form, () => {
 }, { deep: true });
 
 function restoreDraft() {
+  if (guest) return;
   const raw = localStorage.getItem(DRAFT_KEY);
   if (!raw) return;
   try {
@@ -156,6 +158,10 @@ function tomorrowDate() {
 }
 
 async function save(continueAdding = false) {
+  if (guest) {
+    error.value = '游客模式仅展示录入框架，不能保存或修改内容。';
+    return;
+  }
   error.value = '';
   if (!form.title.trim()) {
     error.value = '请填写错题标题。';
@@ -224,8 +230,31 @@ async function remove(id: number) {
   }
 }
 
+function loadGuestFrameworkExample() {
+  if (!guest || !items.value.length) return;
+  const demo = items.value[0];
+  editingId.value = null;
+  quickMode.value = false;
+  Object.assign(form, {
+    title: demo.title,
+    subject: demo.subject,
+    chapter: demo.chapter || '',
+    knowledge_point_id: demo.knowledge_point_id || '',
+    source: demo.source || '',
+    question_text: demo.question_text || '',
+    answer_text: demo.answer_text || '',
+    wrong_reason: demo.wrong_reason || '',
+    summary: demo.summary || '',
+    tags: [...(demo.tags || [])],
+    difficulty: demo.difficulty || 3,
+    status: demo.status || '待复习',
+    next_review_date: demo.next_review_date || ''
+  });
+}
+
 onMounted(async () => {
   await Promise.all([loadKnowledge(), load()]);
+  loadGuestFrameworkExample();
   await editByIdFromQuery();
   if (!route.query.edit) restoreDraft();
   await nextTick();
@@ -248,10 +277,11 @@ onMounted(async () => {
 
     <p v-if="error" class="error">{{ error }}</p>
 
-    <div v-if="!guest" class="grid grid-2">
+    <div class="grid grid-2 guest-framework-grid" :class="{ 'is-readonly': guest }">
       <div class="card">
-        <div class="card-head"><div><h3>{{ editingId ? '编辑错题' : (quickMode ? '快速录题' : '新增错题') }}</h3><p v-if="quickMode && !editingId" class="muted small-text">只填写核心内容，其他字段以后再补充。</p></div><span v-if="draftMessage" class="muted small-text">{{ draftMessage }}</span></div>
+        <div class="card-head"><div><h3>{{ guest ? '错题录入示例' : (editingId ? '编辑错题' : (quickMode ? '快速录题' : '新增错题')) }}</h3><p v-if="guest" class="readonly-hint">游客模式：保留完整录入框架和预览，所有输入与保存操作均已锁定。</p><p v-if="quickMode && !editingId && !guest" class="muted small-text">只填写核心内容，其他字段以后再补充。</p></div><span v-if="draftMessage" class="muted small-text">{{ draftMessage }}</span></div>
         <form class="form" @submit.prevent="save()">
+          <fieldset class="guest-form-fieldset" :disabled="guest">
           <div class="form-row"><label>标题<input v-model="form.title" placeholder="如 极限等价替换错误" /></label><label>科目<select v-model="form.subject"><option>高等数学</option><option>线性代数</option><option>概率论与数理统计</option></select></label></div>
           <div class="form-row"><label>章节<input v-model="form.chapter" placeholder="如 极限" /></label><label v-if="!quickMode || editingId">关联知识点<select v-model="form.knowledge_point_id"><option value="">不关联</option><option v-for="kp in filteredKnowledge" :key="kp.id" :value="kp.id">{{ kp.chapter }} / {{ kp.title }}</option></select></label></div>
           <template v-if="!quickMode || editingId">
@@ -268,7 +298,8 @@ onMounted(async () => {
           <label v-if="!quickMode || editingId">正确解法 Markdown<textarea v-model="form.answer_text" class="large-textarea" /></label>
           <label>错误原因<textarea v-model="form.wrong_reason" placeholder="具体写清楚为什么错" /></label>
           <label v-if="!quickMode || editingId">总结 Markdown<textarea v-model="form.summary" /></label>
-          <div class="actions"><button class="primary" :disabled="saving">{{ saving ? '保存中...' : '保存' }}</button><button v-if="quickMode && !editingId" class="secondary" type="button" :disabled="saving" @click="save(true)">保存并继续</button><button class="secondary" type="button" @click="reset">清空</button></div>
+          <div class="actions"><button class="primary" :disabled="saving || guest">{{ guest ? '游客模式不可保存' : (saving ? '保存中...' : '保存') }}</button><button v-if="quickMode && !editingId && !guest" class="secondary" type="button" :disabled="saving" @click="save(true)">保存并继续</button><button class="secondary" type="button" :disabled="guest" @click="reset">清空</button></div>
+          </fieldset>
         </form>
       </div>
 

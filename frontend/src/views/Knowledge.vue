@@ -19,6 +19,7 @@ const form = reactive({ subject: '高等数学', chapter: '', title: '', content
 const previewHtml = computed(() => renderMarkdown(form.content_md));
 
 watch(form, () => {
+  if (guest) return;
   const hasContent = [form.chapter, form.title, form.content_md].some((value) => String(value ?? '').trim() !== '');
   if (!hasContent) {
     clearDraft();
@@ -29,6 +30,7 @@ watch(form, () => {
 }, { deep: true });
 
 function restoreDraft() {
+  if (guest) return;
   const raw = localStorage.getItem(DRAFT_KEY);
   if (!raw) return;
   try {
@@ -64,6 +66,17 @@ async function load() {
   try {
     const res = await request<{ items: KnowledgePoint[] }>(`/knowledge?${params}`);
     items.value = res.items;
+    if (guest && !route.query.edit && res.items.length) {
+      const demo = res.items[0];
+      Object.assign(form, {
+        subject: demo.subject,
+        chapter: demo.chapter,
+        title: demo.title,
+        content_md: demo.content_md || '',
+        mastery_level: demo.mastery_level || 0
+      });
+      showPreview.value = true;
+    }
     const editId = Number(route.query.edit);
     if (Number.isFinite(editId) && editId > 0) {
       const target = res.items.find((item) => item.id === editId);
@@ -85,6 +98,10 @@ async function loadOneForEdit(id: number) {
 }
 
 async function save() {
+  if (guest) {
+    error.value = '游客模式仅展示录入框架，不能保存或修改内容。';
+    return;
+  }
   error.value = '';
   try {
     if (editingId.value) {
@@ -150,11 +167,12 @@ onMounted(async () => {
 
     <p v-if="error" class="error">{{ error }}</p>
 
-    <div v-if="!guest" class="grid grid-2">
+    <div class="grid grid-2 guest-framework-grid" :class="{ 'is-readonly': guest }">
       <div class="card">
         <div class="card-head">
           <div>
-            <h3>{{ editingId ? '编辑知识点' : '新增知识点' }}</h3>
+            <h3>{{ guest ? '知识点录入示例' : (editingId ? '编辑知识点' : '新增知识点') }}</h3>
+            <span v-if="guest" class="readonly-hint">游客模式：可查看输入框与实时预览，但不能编辑或保存。</span>
             <span v-if="draftMessage" class="muted small-text">{{ draftMessage }}</span>
           </div>
           <button class="secondary" type="button" @click="showPreview = !showPreview">{{ showPreview ? '隐藏预览' : '显示预览' }}</button>
@@ -162,21 +180,21 @@ onMounted(async () => {
         <form class="form" @submit.prevent="save">
           <div class="form-row">
             <label>科目
-              <select v-model="form.subject">
+              <select v-model="form.subject" :disabled="guest">
                 <option>高等数学</option><option>线性代数</option><option>概率论与数理统计</option>
               </select>
             </label>
-            <label>章节<input v-model="form.chapter" placeholder="如 极限 / 特征值 / 随机变量" /></label>
+            <label>章节<input v-model="form.chapter" :disabled="guest" placeholder="如 极限 / 特征值 / 随机变量" /></label>
           </div>
-          <label>标题<input v-model="form.title" placeholder="如 等价无穷小" /></label>
-          <label>掌握程度 0-5<input v-model.number="form.mastery_level" type="number" min="0" max="5" /></label>
-          <label>内容 Markdown<textarea v-model="form.content_md" class="large-textarea" placeholder="# 核心概念
+          <label>标题<input v-model="form.title" :disabled="guest" placeholder="如 等价无穷小" /></label>
+          <label>掌握程度 0-5<input v-model.number="form.mastery_level" :disabled="guest" type="number" min="0" max="5" /></label>
+          <label>内容 Markdown<textarea v-model="form.content_md" :readonly="guest" class="large-textarea" placeholder="# 核心概念
 - 常用公式
 - 典型题型
 - 易错点" /></label>
           <div class="actions">
-            <button class="primary">保存</button>
-            <button class="secondary" type="button" @click="reset">清空</button>
+            <button class="primary" :disabled="guest">{{ guest ? '游客模式不可保存' : '保存' }}</button>
+            <button class="secondary" type="button" :disabled="guest" @click="reset">清空</button>
           </div>
         </form>
       </div>
