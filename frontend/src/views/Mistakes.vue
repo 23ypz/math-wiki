@@ -333,20 +333,22 @@ onMounted(async () => {
 
     <div class="card" style="margin-top:16px">
       <div class="card-head"><h3>错题列表</h3><p class="muted">共 {{ items.length }} 道</p></div>
-      <table class="table compact-table">
-        <thead><tr><th>错题</th><th>章节</th><th>标签</th><th>状态</th><th>复习</th><th>错因</th><th>操作</th></tr></thead>
-        <tbody>
-          <tr v-for="item in items" :key="item.id">
-            <td><strong>{{ item.title }}</strong><br><span class="badge">{{ item.subject }}</span> · 难度 {{ item.difficulty }}/5</td>
-            <td>{{ item.chapter || '未分章节' }}<br><small class="muted">{{ item.knowledge_title || '未关联知识点' }}</small></td>
-            <td><div class="tag-list compact"><span v-for="tag in item.tags || []" :key="tag" class="tag-chip readonly">{{ tag }}</span><span v-if="!item.tags?.length" class="muted">无</span></div></td>
-            <td>{{ item.status }}</td>
-            <td>下次：{{ item.next_review_date || '未设置' }}<br>次数：{{ item.review_count }}</td>
-            <td>{{ (item.wrong_reason || '').slice(0, 80) }}</td>
-            <td><div class="actions nowrap-actions"><RouterLink class="link-button primary-link" :to="`/mistakes/${item.id}`">预览</RouterLink><template v-if="!guest"><button class="secondary" @click="edit(item)">编辑</button><button class="danger" @click="remove(item.id)">删除</button></template></div></td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="records-scroll records-scroll--five" aria-label="错题列表，可上下滚动查看更多">
+        <table class="table compact-table mistakes-list-table">
+          <thead><tr><th>错题</th><th>章节</th><th>标签</th><th>状态</th><th>复习</th><th>错因</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr v-for="item in items" :key="item.id">
+              <td><strong>{{ item.title }}</strong><br><span class="badge">{{ item.subject }}</span> · 难度 {{ item.difficulty }}/5</td>
+              <td>{{ item.chapter || '未分章节' }}<br><small class="muted">{{ item.knowledge_title || '未关联知识点' }}</small></td>
+              <td><div class="tag-list compact"><span v-for="tag in item.tags || []" :key="tag" class="tag-chip readonly">{{ tag }}</span><span v-if="!item.tags?.length" class="muted">无</span></div></td>
+              <td>{{ item.status }}</td>
+              <td>下次：{{ item.next_review_date || '未设置' }}<br>次数：{{ item.review_count }}</td>
+              <td><div class="two-line-preview">{{ (item.wrong_reason || '').slice(0, 120) }}</div></td>
+              <td><div class="actions nowrap-actions"><RouterLink class="link-button primary-link" :to="`/mistakes/${item.id}`">预览</RouterLink><template v-if="!guest"><button class="secondary" @click="edit(item)">编辑</button><button class="danger" @click="remove(item.id)">删除</button></template></div></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </section>
 </template>

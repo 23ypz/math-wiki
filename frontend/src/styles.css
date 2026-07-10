@@ -1426,3 +1426,79 @@ body.landing-active .app-shell {
 @media (max-width: 900px) {
   .guest-framework-grid.is-readonly .preview-scroll { min-height: 260px; }
 }
+
+
+/* Bounded knowledge and mistake lists: keep about five rows visible, scroll the rest. */
+.records-scroll {
+  width: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  scrollbar-gutter: stable both-edges;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card-bg, #fff);
+}
+
+.records-scroll--five {
+  max-height: 430px;
+}
+
+.records-scroll > .table {
+  min-width: 920px;
+  margin: 0;
+}
+
+.records-scroll .table thead {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--card-bg, #fff);
+  box-shadow: 0 1px 0 var(--border);
+}
+
+.records-scroll .table thead th {
+  background: var(--card-bg, #fff);
+}
+
+.records-scroll .table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.records-scroll::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+.records-scroll::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, .48);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+.records-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.two-line-preview {
+  display: -webkit-box;
+  max-width: 280px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+@media (max-width: 900px) {
+  .records-scroll--five {
+    max-height: 390px;
+  }
+}
+
+@media (max-width: 600px) {
+  .records-scroll--five {
+    max-height: 355px;
+  }
+}

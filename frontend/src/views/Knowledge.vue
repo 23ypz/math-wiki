@@ -225,24 +225,26 @@ onMounted(async () => {
           <button class="secondary" @click="load">搜索</button>
         </div>
       </div>
-      <table class="table compact-table knowledge-list-table">
-        <thead><tr><th>知识点</th><th>章节</th><th>掌握</th><th>内容摘要</th><th>操作</th></tr></thead>
-        <tbody>
-          <tr v-for="item in items" :key="item.id">
-            <td class="one-line-cell"><strong>{{ item.title }}</strong><span class="badge small-badge">{{ item.subject }}</span></td>
-            <td class="one-line-cell">{{ item.chapter || '未分章节' }}</td>
-            <td class="mastery-cell"><div class="mini-progress"><span :style="{ width: `${Math.min(100, Math.max(0, item.mastery_level * 20))}%` }"></span></div>{{ item.mastery_level }}/5</td>
-            <td><div class="one-line-preview">{{ stripMarkdown(item.content_md, 90) }}</div></td>
-            <td>
-              <div class="actions nowrap-actions">
-                <RouterLink class="link-button primary-link" :to="`/knowledge/${item.id}`">预览</RouterLink>
-                <template v-if="!guest"><button class="secondary" @click="edit(item)">编辑</button>
-                <button class="danger" @click="remove(item.id)">删除</button></template>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="records-scroll records-scroll--five" aria-label="知识点列表，可上下滚动查看更多">
+        <table class="table compact-table knowledge-list-table">
+          <thead><tr><th>知识点</th><th>章节</th><th>掌握</th><th>内容摘要</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr v-for="item in items" :key="item.id">
+              <td class="one-line-cell"><strong>{{ item.title }}</strong><span class="badge small-badge">{{ item.subject }}</span></td>
+              <td class="one-line-cell">{{ item.chapter || '未分章节' }}</td>
+              <td class="mastery-cell"><div class="mini-progress"><span :style="{ width: `${Math.min(100, Math.max(0, item.mastery_level * 20))}%` }"></span></div>{{ item.mastery_level }}/5</td>
+              <td><div class="one-line-preview">{{ stripMarkdown(item.content_md, 90) }}</div></td>
+              <td>
+                <div class="actions nowrap-actions">
+                  <RouterLink class="link-button primary-link" :to="`/knowledge/${item.id}`">预览</RouterLink>
+                  <template v-if="!guest"><button class="secondary" @click="edit(item)">编辑</button>
+                  <button class="danger" @click="remove(item.id)">删除</button></template>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </section>
 </template>
