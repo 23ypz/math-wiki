@@ -179,7 +179,7 @@ onMounted(async () => {
           </div>
           <label>题目 Markdown<textarea v-model="form.question_text" class="large-textarea" /></label>
           <label>正确解法 Markdown<textarea v-model="form.answer_text" class="large-textarea" /></label>
-          <label>错误原因 Markdown<textarea v-model="form.wrong_reason" placeholder="概念不清 / 公式记错 / 计算失误 / 方法不会..." /></label>
+          <label>错误原因<textarea v-model="form.wrong_reason" placeholder="概念不清 / 公式记错 / 计算失误 / 方法不会..." /></label>
           <label>总结 Markdown<textarea v-model="form.summary" /></label>
           <div class="actions"><button class="primary">保存</button><button class="secondary" type="button" @click="reset">清空</button></div>
         </form>
