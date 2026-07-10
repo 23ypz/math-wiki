@@ -52,3 +52,33 @@ export type ReviewRecord = {
   next_review_date: string | null;
   created_at?: string;
 };
+
+export type ExamScore = {
+  id: number;
+  exam_name: string;
+  exam_type: string;
+  exam_date: string | null;
+  total_score: number;
+  calculus_score: number;
+  linear_algebra_score: number;
+  probability_score: number;
+  duration_minutes: number;
+  mistake_count: number;
+  note: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type StudyGoal = {
+  id: number;
+  title: string;
+  goal_type: string;
+  start_date: string | null;
+  deadline: string | null;
+  current_value: number;
+  target_value: number;
+  status: string;
+  note: string;
+  created_at?: string;
+  updated_at?: string;
+};

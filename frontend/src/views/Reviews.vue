@@ -51,7 +51,7 @@ const overdueCount = computed(() => items.value.filter((item) => item.next_revie
 async function load() {
   error.value = '';
   try {
-    const res = await request<{ items: Mistake[] }>('/reviews/today');
+    const res = await request<{ items: Mistake[] }>('/review-records?mode=today');
     items.value = res.items;
     for (const item of items.value) {
       if (!form[item.id]) {

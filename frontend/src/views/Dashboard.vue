@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { request } from '../api';
-import type { KnowledgePoint, Mistake, ReviewRecord, StudyLog } from '../types';
+import type { ExamScore, KnowledgePoint, Mistake, ReviewRecord, StudyGoal, StudyLog } from '../types';
 
 const loading = ref(true);
 const exporting = ref(false);
@@ -19,12 +19,47 @@ const data = ref<any>({
   statusStats: [],
   weakChapters: [],
   weakKnowledge: [],
-  recentStudy: []
+  recentStudy: [],
+  activity: [],
+  lastWeekStudyMinutes: 0,
+  newMistakesWeek: 0,
+  newKnowledgeWeek: 0,
+  activeGoalCount: 0,
+  latestExam: null,
+  topTagRaw: ''
 });
 
 const maxStatus = computed(() => Math.max(1, ...data.value.statusStats.map((item: any) => Number(item.count) || 0)));
 const maxWeak = computed(() => Math.max(1, ...data.value.weakChapters.map((item: any) => Number(item.count) || 0)));
 const maxStudy = computed(() => Math.max(1, ...data.value.recentStudy.map((item: any) => Number(item.minutes) || 0)));
+
+const activityMap = computed(() => {
+  const map = new Map<string, any>();
+  for (const item of data.value.activity || []) map.set(String(item.activity_date).slice(0, 10), item);
+  return map;
+});
+const heatmapDays = computed(() => {
+  const result: any[] = [];
+  const today = new Date();
+  for (let offset = 89; offset >= 0; offset--) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - offset);
+    const key = date.toISOString().slice(0, 10);
+    const item = activityMap.value.get(key) || {};
+    const score = Number(item.study_minutes || 0) / 30 + Number(item.new_mistakes || 0) + Number(item.reviewed || 0) + Number(item.new_knowledge || 0);
+    result.push({ date: key, score, level: score <= 0 ? 0 : score < 2 ? 1 : score < 4 ? 2 : score < 7 ? 3 : 4, ...item });
+  }
+  return result;
+});
+const activeDays = computed(() => heatmapDays.value.filter((x) => x.level > 0).length);
+const studyChange = computed(() => Number(data.value.weekStudyMinutes || 0) - Number(data.value.lastWeekStudyMinutes || 0));
+const weeklySummary = computed(() => {
+  const hours = Math.round(Number(data.value.weekStudyMinutes || 0) / 60 * 10) / 10;
+  const change = Math.round(Math.abs(studyChange.value) / 60 * 10) / 10;
+  const trend = studyChange.value >= 0 ? `较上周增加 ${change} 小时` : `较上周减少 ${change} 小时`;
+  const weak = data.value.weakChapters?.[0];
+  return `本周学习 ${hours} 小时，${trend}；新增知识点 ${data.value.newKnowledgeWeek || 0} 个，新增错题 ${data.value.newMistakesWeek || 0} 道，完成复习 ${data.value.reviewedWeekCount || 0} 次。${weak ? `当前最需要关注的是 ${weak.subject} / ${weak.chapter || '未分类'}。` : ''}`;
+});
 
 async function load() {
   loading.value = true;
@@ -51,21 +86,25 @@ function download(filename: string, content: string, type = 'application/json;ch
 }
 
 async function fetchBackupData() {
-  const [knowledge, mistakes, studyLogs] = await Promise.all([
+  const [knowledge, mistakes, studyLogs, exams, goals] = await Promise.all([
     request<{ items: KnowledgePoint[] }>('/knowledge'),
     request<{ items: Mistake[] }>('/mistakes?sort=created_asc'),
-    request<{ items: StudyLog[] }>('/study-logs')
+    request<{ items: StudyLog[] }>('/study-logs'),
+    request<{ items: ExamScore[] }>('/progress?resource=exams'),
+    request<{ items: StudyGoal[] }>('/progress?resource=goals')
   ]);
   const reviewGroups = await Promise.all(mistakes.items.map(async (item) => {
     const res = await request<{ items: ReviewRecord[] }>(`/review-records?mistake_id=${item.id}`);
     return res.items;
   }));
   return {
-    version: 8,
+    version: 9,
     exported_at: new Date().toISOString(),
     knowledge_points: knowledge.items,
     mistakes: mistakes.items,
     study_logs: studyLogs.items,
+    exam_scores: exams.items,
+    study_goals: goals.items,
     review_records: reviewGroups.flat()
   };
 }
@@ -75,7 +114,7 @@ async function exportJson() {
   error.value = '';
   try {
     const backup = await fetchBackupData();
-    download(`math-wiki-v8-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(backup, null, 2));
+    download(`math-wiki-v9-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(backup, null, 2));
   } catch (e) {
     error.value = e instanceof Error ? e.message : '导出失败';
   } finally {
@@ -100,7 +139,11 @@ async function exportMarkdown() {
     for (const item of backup.study_logs) {
       lines.push('', `### ${item.study_date} ${item.subject}`, `- 学习时长：${item.duration_minutes} 分钟`, `- 新增错题：${item.new_mistakes_count}`, `- 复习错题：${item.reviewed_mistakes_count}`, '', item.content || '未填写学习内容', '', item.summary || '');
     }
-    download(`math-wiki-v8-export-${new Date().toISOString().slice(0, 10)}.md`, lines.join('\n'), 'text/markdown;charset=utf-8');
+    lines.push('', '## 四、成绩记录');
+    for (const item of backup.exam_scores) lines.push('', `### ${item.exam_date || ''} ${item.exam_name}`, `- 类型：${item.exam_type}`, `- 总分：${item.total_score}`, `- 高数 / 线代 / 概率：${item.calculus_score} / ${item.linear_algebra_score} / ${item.probability_score}`, `- 用时：${item.duration_minutes} 分钟`, '', item.note || '');
+    lines.push('', '## 五、阶段目标');
+    for (const item of backup.study_goals) lines.push('', `### ${item.title}`, `- 类型：${item.goal_type}`, `- 状态：${item.status}`, `- 进度：${item.current_value}/${item.target_value}`, `- 截止日期：${item.deadline || '未设置'}`, '', item.note || '');
+    download(`math-wiki-v9-export-${new Date().toISOString().slice(0, 10)}.md`, lines.join('\n'), 'text/markdown;charset=utf-8');
   } catch (e) {
     error.value = e instanceof Error ? e.message : '导出失败';
   } finally {
@@ -109,14 +152,18 @@ async function exportMarkdown() {
 }
 
 async function deleteCurrentData() {
-  const [knowledge, mistakes, studyLogs] = await Promise.all([
+  const [knowledge, mistakes, studyLogs, exams, goals] = await Promise.all([
     request<{ items: KnowledgePoint[] }>('/knowledge'),
     request<{ items: Mistake[] }>('/mistakes'),
-    request<{ items: StudyLog[] }>('/study-logs')
+    request<{ items: StudyLog[] }>('/study-logs'),
+    request<{ items: ExamScore[] }>('/progress?resource=exams'),
+    request<{ items: StudyGoal[] }>('/progress?resource=goals')
   ]);
   for (const item of mistakes.items) await request(`/mistakes/${item.id}`, { method: 'DELETE' });
   for (const item of knowledge.items) await request(`/knowledge/${item.id}`, { method: 'DELETE' });
   for (const item of studyLogs.items) await request(`/study-logs/${item.id}`, { method: 'DELETE' });
+  for (const item of exams.items) await request(`/progress?resource=exams&id=${item.id}`, { method: 'DELETE' });
+  for (const item of goals.items) await request(`/progress?resource=goals&id=${item.id}`, { method: 'DELETE' });
 }
 
 async function importBackup(event: Event) {
@@ -133,6 +180,8 @@ async function importBackup(event: Event) {
     const mistakes = Array.isArray(backup.mistakes) ? backup.mistakes : [];
     const studyLogs = Array.isArray(backup.study_logs) ? backup.study_logs : [];
     const reviewRecords = Array.isArray(backup.review_records) ? backup.review_records : [];
+    const examScores = Array.isArray(backup.exam_scores) ? backup.exam_scores : [];
+    const studyGoals = Array.isArray(backup.study_goals) ? backup.study_goals : [];
     if (!knowledge.length && !mistakes.length && !studyLogs.length) throw new Error('备份文件中没有可导入的数据。');
     if (importMode.value === 'overwrite') {
       if (!confirm('覆盖模式会先删除当前知识点、错题和学习日志，确定继续吗？')) return;
@@ -155,13 +204,16 @@ async function importBackup(event: Event) {
       await request('/study-logs', { method: 'POST', body: JSON.stringify(item) });
     }
 
+    for (const item of examScores) await request('/progress?resource=exams', { method: 'POST', body: JSON.stringify(item) });
+    for (const item of studyGoals) await request('/progress?resource=goals', { method: 'POST', body: JSON.stringify(item) });
+
     for (const record of reviewRecords) {
       const newMistakeId = mistakeMap.get(Number(record.mistake_id));
       if (!newMistakeId) continue;
       await request('/review-records', { method: 'POST', body: JSON.stringify({ ...record, mistake_id: newMistakeId, preserve_state: true }) });
     }
 
-    importSummary.value = `导入完成：知识点 ${knowledge.length} 个，错题 ${mistakes.length} 道，学习日志 ${studyLogs.length} 条，复习记录 ${reviewRecords.length} 条。`;
+    importSummary.value = `导入完成：知识点 ${knowledge.length} 个，错题 ${mistakes.length} 道，学习日志 ${studyLogs.length} 条，复习记录 ${reviewRecords.length} 条，成绩 ${examScores.length} 条，目标 ${studyGoals.length} 个。`;
     await load();
   } catch (e) {
     error.value = e instanceof Error ? e.message : '导入失败';
@@ -193,6 +245,11 @@ onMounted(load);
     <div class="grid grid-2" style="margin-top:16px">
       <div class="card"><h3>薄弱知识点 Top 8</h3><div v-if="data.weakKnowledge.length === 0" class="muted">暂无薄弱知识点数据</div><RouterLink v-for="item in data.weakKnowledge" :key="item.id" :to="`/knowledge/${item.id}`" class="weak-knowledge-row"><div><strong>{{ item.title }}</strong><span>{{ item.subject }} / {{ item.chapter || '未分章节' }}</span></div><small>{{ item.mistake_count }} 道未掌握错题 · 掌握 {{ item.mastery_level }}/5</small></RouterLink></div>
       <div class="card"><h3>最近 7 天学习时长</h3><div v-if="data.recentStudy.length === 0" class="muted">最近 7 天暂无学习日志</div><div v-for="item in data.recentStudy" :key="item.study_date" class="bar-row"><div class="bar-label"><span>{{ item.study_date }}</span><strong>{{ item.minutes }} 分钟</strong></div><div class="bar study-bar"><span :style="{ width: `${Math.max(6, item.minutes / maxStudy * 100)}%` }"></span></div></div></div>
+    </div>
+
+    <div class="grid grid-2" style="margin-top:16px">
+      <div class="card"><div class="card-head"><div><h3>最近 90 天学习热力图</h3><p class="muted">学习日志、错题、复习和知识点都会计入活跃度。</p></div><strong>{{ activeDays }} 天活跃</strong></div><div class="heatmap"><span v-for="day in heatmapDays" :key="day.date" :class="`heat-level-${day.level}`" :title="`${day.date}：学习 ${day.study_minutes || 0} 分钟，新增错题 ${day.new_mistakes || 0}，复习 ${day.reviewed || 0}`"></span></div><div class="heat-legend"><small>较少</small><i class="heat-level-0"></i><i class="heat-level-1"></i><i class="heat-level-2"></i><i class="heat-level-3"></i><i class="heat-level-4"></i><small>较多</small></div></div>
+      <div class="card"><h3>本周学习报告</h3><p>{{ weeklySummary }}</p><div class="mini-stats"><span>进行中目标 <strong>{{ data.activeGoalCount }}</strong></span><span>最新成绩 <strong>{{ data.latestExam?.total_score ?? '-' }}</strong></span></div><RouterLink class="link-button secondary-link" to="/progress">查看成绩与阶段目标</RouterLink></div>
     </div>
 
     <div class="card" style="margin-top:16px"><h3>下一步复习建议</h3><p v-if="data.overdueCount > 0">你有 {{ data.overdueCount }} 道错题已经逾期，建议先进入“今日复习”清理逾期内容。</p><p v-else-if="data.dueCount > 0">今天有 {{ data.dueCount }} 道错题待复习，完成后再复盘薄弱知识点。</p><p v-else-if="data.weakKnowledge.length">今天没有到期错题，可以优先复盘“{{ data.weakKnowledge[0].title }}”。</p><p v-else>今天没有到期错题，建议继续整理新知识点或完成一组章节练习。</p></div>

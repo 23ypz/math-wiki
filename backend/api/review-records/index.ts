@@ -10,6 +10,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (req.method === 'GET') {
+      if (one(req.query.mode) === 'today') {
+        const items = await rows(
+          `SELECT * FROM mistakes
+           WHERE user_id = ?
+             AND next_review_date IS NOT NULL
+             AND next_review_date <= CURDATE()
+             AND status <> '已掌握'
+           ORDER BY next_review_date ASC, id DESC
+           LIMIT 100`,
+          [user.userId]
+        );
+        return ok(res, { items });
+      }
       const mistakeId = Number(one(req.query.mistake_id));
       if (!Number.isFinite(mistakeId)) return badRequest(res, 'mistake_id is required.');
       const items = await rows(

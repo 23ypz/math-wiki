@@ -776,3 +776,37 @@ mjx-container[display="true"] {
   .search-box { grid-template-columns: 1fr; }
   .search-result-row div { flex-direction: column; gap: 4px; }
 }
+
+/* v9 learning progress, heatmap, scores and goals */
+.tab-row { display: flex; gap: 8px; margin-bottom: 16px; }
+.tab-row button { border: 1px solid #dbe3ef; background: #fff; color: #475569; border-radius: 10px; padding: 9px 16px; font-weight: 700; }
+.tab-row button.active { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+.score-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin: 12px 0; }
+.score-chart { overflow-x: auto; padding-top: 8px; }
+.score-chart svg { width: 100%; min-width: 560px; height: 200px; overflow: visible; }
+.score-chart .axis { stroke: #cbd5e1; stroke-width: 1; }
+.score-chart .score-line { fill: none; stroke: #2563eb; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+.chart-labels { display: flex; justify-content: space-between; min-width: 560px; color: #64748b; font-size: 11px; }
+.chart-labels span { display: grid; text-align: center; gap: 2px; }
+.chart-labels b { color: #1e293b; font-size: 13px; }
+.table-note { display: block; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #64748b; margin-top: 3px; }
+.danger-link { border: 0; background: transparent; color: #dc2626; cursor: pointer; padding: 6px 8px; }
+.goal-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.goal-card { display: grid; gap: 12px; }
+.goal-progress { display: grid; gap: 7px; }
+.goal-progress > div { height: 10px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
+.goal-progress > div span { display: block; height: 100%; background: linear-gradient(90deg, #2563eb, #60a5fa); }
+.goal-progress strong { font-size: 13px; color: #475569; }
+.dangerBadge { background: #fee2e2 !important; color: #b91c1c !important; }
+.heatmap { display: grid; grid-template-rows: repeat(7, 12px); grid-auto-flow: column; grid-auto-columns: 12px; gap: 4px; overflow-x: auto; padding: 8px 0 12px; }
+.heatmap span, .heat-legend i { width: 12px; height: 12px; border-radius: 3px; display: block; }
+.heat-level-0 { background: #e2e8f0; }
+.heat-level-1 { background: #bfdbfe; }
+.heat-level-2 { background: #60a5fa; }
+.heat-level-3 { background: #2563eb; }
+.heat-level-4 { background: #1e3a8a; }
+.heat-legend { display: flex; justify-content: flex-end; align-items: center; gap: 5px; color: #64748b; }
+.mini-stats { display: flex; gap: 12px; flex-wrap: wrap; margin: 14px 0; }
+.mini-stats span { background: #f1f5f9; padding: 9px 11px; border-radius: 9px; color: #475569; }
+@media (max-width: 1050px) { .score-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .score-grid, .goal-list { grid-template-columns: 1fr; } }
