@@ -10,13 +10,18 @@ const data = ref<any>({
   mistakeCount: 0,
   knowledgeCount: 0,
   dueCount: 0,
+  overdueCount: 0,
   weekStudyMinutes: 0,
+  reviewedWeekCount: 0,
   statusStats: [],
-  weakChapters: []
+  weakChapters: [],
+  weakKnowledge: [],
+  recentStudy: []
 });
 
 const maxStatus = computed(() => Math.max(1, ...data.value.statusStats.map((item: any) => Number(item.count) || 0)));
 const maxWeak = computed(() => Math.max(1, ...data.value.weakChapters.map((item: any) => Number(item.count) || 0)));
+const maxStudy = computed(() => Math.max(1, ...data.value.recentStudy.map((item: any) => Number(item.minutes) || 0)));
 
 async function load() {
   loading.value = true;
@@ -157,7 +162,9 @@ onMounted(load);
       <div class="card stat"><span>知识点数量</span><strong>{{ data.knowledgeCount }}</strong></div>
       <div class="card stat"><span>错题数量</span><strong>{{ data.mistakeCount }}</strong></div>
       <div class="card stat"><span>今日待复习</span><strong>{{ data.dueCount }}</strong></div>
+      <div class="card stat"><span>已经逾期</span><strong>{{ data.overdueCount }}</strong></div>
       <div class="card stat"><span>近 7 天学习</span><strong>{{ Math.round(data.weekStudyMinutes / 60 * 10) / 10 }}h</strong></div>
+      <div class="card stat"><span>近 7 天复习</span><strong>{{ data.reviewedWeekCount }}</strong></div>
     </div>
 
     <div class="grid grid-2" style="margin-top:16px">
@@ -179,9 +186,40 @@ onMounted(load);
       </div>
     </div>
 
+    <div class="grid grid-2" style="margin-top:16px">
+      <div class="card">
+        <h3>薄弱知识点 Top 8</h3>
+        <div v-if="data.weakKnowledge.length === 0" class="muted">暂无薄弱知识点数据</div>
+        <RouterLink
+          v-for="item in data.weakKnowledge"
+          :key="item.id"
+          :to="`/knowledge/${item.id}`"
+          class="weak-knowledge-row"
+        >
+          <div>
+            <strong>{{ item.title }}</strong>
+            <span>{{ item.subject }} / {{ item.chapter || '未分章节' }}</span>
+          </div>
+          <small>{{ item.mistake_count }} 道未掌握错题 · 掌握 {{ item.mastery_level }}/5</small>
+        </RouterLink>
+      </div>
+
+      <div class="card">
+        <h3>最近 7 天学习时长</h3>
+        <div v-if="data.recentStudy.length === 0" class="muted">最近 7 天暂无学习日志</div>
+        <div v-for="item in data.recentStudy" :key="item.study_date" class="bar-row">
+          <div class="bar-label"><span>{{ item.study_date }}</span><strong>{{ item.minutes }} 分钟</strong></div>
+          <div class="bar study-bar"><span :style="{ width: `${Math.max(6, item.minutes / maxStudy * 100)}%` }"></span></div>
+        </div>
+      </div>
+    </div>
+
     <div class="card" style="margin-top:16px">
       <h3>下一步复习建议</h3>
-      <p>优先处理“今日待复习”错题；如果今日待复习为 0，就从“薄弱章节 Top 8”里选错题最多的章节复盘知识点。</p>
+      <p v-if="data.overdueCount > 0">你有 {{ data.overdueCount }} 道错题已经逾期，建议先进入“今日复习”清理逾期内容。</p>
+      <p v-else-if="data.dueCount > 0">今天有 {{ data.dueCount }} 道错题待复习，完成后再复盘薄弱知识点。</p>
+      <p v-else-if="data.weakKnowledge.length">今天没有到期错题，可以优先复盘“{{ data.weakKnowledge[0].title }}”。</p>
+      <p v-else>今天没有到期错题，建议继续整理新知识点或完成一组章节练习。</p>
     </div>
   </section>
 </template>

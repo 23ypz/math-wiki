@@ -650,3 +650,53 @@ mjx-container[display="true"] {
 @media (max-width: 640px) {
   .review-info-grid { grid-template-columns: 1fr; }
 }
+
+/* v7 review workflow, drafts and dashboard */
+.review-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.review-card { display: grid; gap: 12px; }
+.review-result-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.review-result-buttons button {
+  border: 1px solid #dbe3ef;
+  background: #f8fafc;
+  color: #334155;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 700;
+}
+.review-result-buttons button:hover,
+.review-result-buttons button.active {
+  color: #1d4ed8;
+  border-color: #93c5fd;
+  background: #dbeafe;
+}
+.weak-knowledge-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 11px 0;
+  border-bottom: 1px solid #e2e8f0;
+  color: #0f172a;
+  text-decoration: none;
+}
+.weak-knowledge-row:last-child { border-bottom: none; }
+.weak-knowledge-row div { display: grid; gap: 3px; min-width: 0; }
+.weak-knowledge-row strong,
+.weak-knowledge-row span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.weak-knowledge-row span,
+.weak-knowledge-row small { color: #64748b; }
+.weak-knowledge-row:hover strong { color: #1d4ed8; }
+.study-bar span { background: linear-gradient(90deg, #2563eb, #60a5fa); }
+@media (max-width: 700px) {
+  .review-summary-grid,
+  .review-result-buttons { grid-template-columns: 1fr; }
+  .weak-knowledge-row { align-items: flex-start; flex-direction: column; }
+}

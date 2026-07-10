@@ -9,15 +9,49 @@ const router = useRouter();
 const route = useRoute();
 const items = ref<KnowledgePoint[]>([]);
 const error = ref('');
+const draftMessage = ref('');
 const editingId = ref<number | null>(null);
 const showPreview = ref(true);
 const filter = reactive({ q: '', subject: '' });
+const DRAFT_KEY = 'math-wiki-knowledge-draft-v1';
 const form = reactive({ subject: '高等数学', chapter: '', title: '', content_md: '', mastery_level: 0 });
 const previewHtml = computed(() => renderMarkdown(form.content_md));
+
+watch(form, () => {
+  const hasContent = [form.chapter, form.title, form.content_md].some((value) => String(value ?? '').trim() !== '');
+  if (!hasContent) {
+    clearDraft();
+    return;
+  }
+  localStorage.setItem(DRAFT_KEY, JSON.stringify({ editingId: editingId.value, form: { ...form } }));
+  draftMessage.value = '草稿已自动保存';
+}, { deep: true });
+
+function restoreDraft() {
+  const raw = localStorage.getItem(DRAFT_KEY);
+  if (!raw) return;
+  try {
+    const draft = JSON.parse(raw) as { editingId?: number | null; form?: Record<string, unknown> };
+    if (!draft.form) return;
+    const hasContent = ['chapter', 'title', 'content_md'].some((key) => String(draft.form?.[key] ?? '').trim() !== '');
+    if (!hasContent || !confirm('检测到未提交的知识点草稿，是否恢复？')) return;
+    editingId.value = draft.editingId || null;
+    Object.assign(form, draft.form);
+    draftMessage.value = '已恢复上次草稿';
+  } catch {
+    localStorage.removeItem(DRAFT_KEY);
+  }
+}
+
+function clearDraft() {
+  localStorage.removeItem(DRAFT_KEY);
+  draftMessage.value = '';
+}
 
 function reset() {
   editingId.value = null;
   Object.assign(form, { subject: '高等数学', chapter: '', title: '', content_md: '', mastery_level: 0 });
+  clearDraft();
   if (route.query.edit) router.replace('/knowledge');
 }
 
@@ -57,6 +91,7 @@ async function save() {
     } else {
       await request('/knowledge', { method: 'POST', body: JSON.stringify(form) });
     }
+    clearDraft();
     reset();
     await load();
   } catch (e) {
@@ -97,6 +132,7 @@ watch(() => route.query.edit, async () => {
 
 onMounted(async () => {
   await load();
+  if (!route.query.edit) restoreDraft();
   await nextTick();
   typesetMath();
 });
@@ -116,7 +152,10 @@ onMounted(async () => {
     <div class="grid grid-2">
       <div class="card">
         <div class="card-head">
-          <h3>{{ editingId ? '编辑知识点' : '新增知识点' }}</h3>
+          <div>
+            <h3>{{ editingId ? '编辑知识点' : '新增知识点' }}</h3>
+            <span v-if="draftMessage" class="muted small-text">{{ draftMessage }}</span>
+          </div>
           <button class="secondary" type="button" @click="showPreview = !showPreview">{{ showPreview ? '隐藏预览' : '显示预览' }}</button>
         </div>
         <form class="form" @submit.prevent="save">

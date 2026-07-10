@@ -9,8 +9,10 @@ const route = useRoute();
 const items = ref<Mistake[]>([]);
 const knowledgeItems = ref<KnowledgePoint[]>([]);
 const error = ref('');
+const draftMessage = ref('');
 const editingId = ref<number | null>(null);
 const filter = reactive({ q: '', subject: '', status: '' });
+const DRAFT_KEY = 'math-wiki-mistake-draft-v1';
 const form = reactive({
   title: '',
   subject: '高等数学',
@@ -43,12 +45,46 @@ watch([questionPreview, answerPreview, wrongReasonPreview, summaryPreview], () =
   nextTick(typesetMath);
 }, { flush: 'post' });
 
+watch(form, () => {
+  const hasContent = [form.title, form.chapter, form.source, form.question_text, form.answer_text, form.wrong_reason, form.summary]
+    .some((value) => String(value ?? '').trim() !== '');
+  if (!hasContent) {
+    clearDraft();
+    return;
+  }
+  localStorage.setItem(DRAFT_KEY, JSON.stringify({ editingId: editingId.value, form: { ...form } }));
+  draftMessage.value = '草稿已自动保存';
+}, { deep: true });
+
+function restoreDraft() {
+  const raw = localStorage.getItem(DRAFT_KEY);
+  if (!raw) return;
+  try {
+    const draft = JSON.parse(raw) as { editingId?: number | null; form?: Record<string, unknown> };
+    if (!draft.form) return;
+    const hasContent = ['title', 'chapter', 'source', 'question_text', 'answer_text', 'wrong_reason', 'summary']
+      .some((key) => String(draft.form?.[key] ?? '').trim() !== '');
+    if (!hasContent || !confirm('检测到未提交的错题草稿，是否恢复？')) return;
+    editingId.value = draft.editingId || null;
+    Object.assign(form, draft.form);
+    draftMessage.value = '已恢复上次草稿';
+  } catch {
+    localStorage.removeItem(DRAFT_KEY);
+  }
+}
+
+function clearDraft() {
+  localStorage.removeItem(DRAFT_KEY);
+  draftMessage.value = '';
+}
+
 function reset() {
   editingId.value = null;
   Object.assign(form, {
     title: '', subject: '高等数学', chapter: '', knowledge_point_id: '', source: '', question_text: '', answer_text: '',
     wrong_reason: '', summary: '', difficulty: 3, status: '待复习', next_review_date: ''
   });
+  clearDraft();
 }
 
 async function loadKnowledge() {
@@ -97,6 +133,7 @@ async function save() {
     } else {
       await request('/mistakes', { method: 'POST', body: JSON.stringify(payload) });
     }
+    clearDraft();
     reset();
     await load();
   } catch (e) {
@@ -136,6 +173,7 @@ async function remove(id: number) {
 onMounted(async () => {
   await Promise.all([loadKnowledge(), load()]);
   await editByIdFromQuery();
+  if (!route.query.edit) restoreDraft();
   await nextTick();
   typesetMath();
 });
@@ -154,7 +192,10 @@ onMounted(async () => {
 
     <div class="grid grid-2">
       <div class="card">
-        <h3>{{ editingId ? '编辑错题' : '新增错题' }}</h3>
+        <div class="card-head">
+          <h3>{{ editingId ? '编辑错题' : '新增错题' }}</h3>
+          <span v-if="draftMessage" class="muted small-text">{{ draftMessage }}</span>
+        </div>
         <form class="form" @submit.prevent="save">
           <div class="form-row">
             <label>标题<input v-model="form.title" placeholder="如 极限等价替换错误" /></label>
