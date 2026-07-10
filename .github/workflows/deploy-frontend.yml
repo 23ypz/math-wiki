@@ -12,7 +12,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
+  group: github-pages
   cancel-in-progress: true
 
 jobs:
@@ -20,29 +20,41 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v6
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Show versions
+        run: |
+          node --version
+          npm --version
 
       - name: Install dependencies
         working-directory: frontend
-        run: npm install
+        run: npm install --include=dev --no-audit --no-fund
 
-      - name: Build
+      - name: Check build commands
+        working-directory: frontend
+        run: |
+          npm exec vite -- --version
+          npm exec vue-tsc -- --version
+
+      - name: Build frontend
         working-directory: frontend
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
           VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
         run: npm run build
 
-      - name: Configure Pages
+      - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload artifact
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: frontend/dist
@@ -55,6 +67,6 @@ jobs:
     needs: build
 
     steps:
-      - name: Deploy to GitHub Pages
+      - name: Deploy GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
