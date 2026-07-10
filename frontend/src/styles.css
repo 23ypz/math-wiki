@@ -810,3 +810,84 @@ mjx-container[display="true"] {
 .mini-stats span { background: #f1f5f9; padding: 9px 11px; border-radius: 9px; color: #475569; }
 @media (max-width: 1050px) { .score-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 760px) { .score-grid, .goal-list { grid-template-columns: 1fr; } }
+
+/* v10 review reading, quick entry and printable mistake book */
+.reveal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 22px 0 10px;
+  padding: 14px;
+  border: 1px dashed #bfdbfe;
+  border-radius: 12px;
+  background: #eff6ff;
+}
+.reveal-panel {
+  animation: revealPanel .18s ease-out;
+}
+@keyframes revealPanel {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.focus-layout { grid-template-columns: minmax(0, 1fr) !important; }
+.focus-reading-mode .mistake-reading-card { max-width: 980px; width: 100%; margin: 0 auto; }
+.focus-reading-mode .detail-page-title { position: sticky; top: 0; z-index: 5; background: #f8fafc; padding: 10px 0; }
+.print-controls { margin-bottom: 18px; }
+.print-mode-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 14px;
+}
+.print-mode-row label { display: inline-flex; align-items: center; gap: 6px; }
+.print-mode-row input { width: auto; }
+.print-document {
+  max-width: 900px;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 34px;
+}
+.print-document-header {
+  text-align: center;
+  margin-bottom: 26px;
+  padding-bottom: 18px;
+  border-bottom: 2px solid #0f172a;
+}
+.print-document-header h1 { margin: 0 0 8px; }
+.print-document-header p { margin: 0; color: #64748b; }
+.print-mistake {
+  break-inside: avoid;
+  page-break-inside: avoid;
+  padding: 0 0 24px;
+  margin: 0 0 24px;
+  border-bottom: 1px solid #cbd5e1;
+}
+.print-mistake:last-child { border-bottom: 0; }
+.print-mistake-title h2 { margin-bottom: 5px; }
+.print-mistake-title p { color: #64748b; margin-top: 0; }
+.print-mistake section { margin-top: 16px; }
+.print-mistake section h3 { margin-bottom: 8px; font-size: 16px; }
+.print-meta { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 16px; color: #64748b; font-size: 13px; }
+@media (max-width: 760px) {
+  .reveal-actions,
+  .print-mode-row { align-items: stretch; flex-direction: column; }
+  .print-document { padding: 18px; border-radius: 10px; }
+}
+@media print {
+  @page { size: A4; margin: 16mm; }
+  body { background: #fff !important; color: #000; }
+  .sidebar,
+  .no-print,
+  .detail-page-title,
+  .reveal-actions { display: none !important; }
+  .app-shell,
+  .main { display: block !important; margin: 0 !important; padding: 0 !important; width: 100% !important; }
+  .print-page { padding: 0 !important; }
+  .print-document { max-width: none; border: 0; border-radius: 0; padding: 0; box-shadow: none; }
+  .print-mistake { break-inside: avoid; page-break-inside: avoid; }
+  .markdown-body pre { white-space: pre-wrap; }
+  a { color: #000 !important; text-decoration: none !important; }
+}

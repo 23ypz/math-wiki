@@ -12,6 +12,9 @@ const items = ref<Mistake[]>([]);
 const error = ref('');
 const loading = ref(false);
 const reviewRecords = ref<ReviewRecord[]>([]);
+const showAnswer = ref(false);
+const showAnalysis = ref(false);
+const focusMode = ref(false);
 
 const currentId = computed(() => Number(route.params.id));
 const currentSubject = computed(() => item.value?.subject || '未分类');
@@ -27,6 +30,9 @@ const chapters = computed(() => {
   return Array.from(chapterMap.entries()).map(([chapter, count]) => ({ chapter, count }));
 });
 const chapterItems = computed(() => subjectItems.value.filter((mistake) => (mistake.chapter || '未分章节') === currentChapter.value));
+const currentIndex = computed(() => chapterItems.value.findIndex((mistake) => mistake.id === currentId.value));
+const previousItem = computed(() => currentIndex.value > 0 ? chapterItems.value[currentIndex.value - 1] : null);
+const nextItem = computed(() => currentIndex.value >= 0 && currentIndex.value < chapterItems.value.length - 1 ? chapterItems.value[currentIndex.value + 1] : null);
 
 const questionHtml = computed(() => renderMarkdown(item.value?.question_text || ''));
 const answerHtml = computed(() => renderMarkdown(item.value?.answer_text || ''));
@@ -42,6 +48,17 @@ function jumpToSection(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+function openMistake(id: number) {
+  router.push(`/mistakes/${id}`);
+}
+
+function openRandom() {
+  const candidates = chapterItems.value.filter((mistake) => mistake.id !== currentId.value);
+  if (!candidates.length) return;
+  const target = candidates[Math.floor(Math.random() * candidates.length)];
+  openMistake(target.id);
+}
+
 async function loadList() {
   const res = await request<{ items: Mistake[] }>('/mistakes');
   items.value = res.items;
@@ -50,6 +67,8 @@ async function loadList() {
 async function loadDetail() {
   error.value = '';
   loading.value = true;
+  showAnswer.value = false;
+  showAnalysis.value = false;
   try {
     const [detail, history] = await Promise.all([
       request<{ item: Mistake }>(`/mistakes/${currentId.value}`),
@@ -72,7 +91,7 @@ function editCurrent() {
 }
 
 watch(currentId, loadDetail);
-watch([questionHtml, answerHtml, reasonHtml, summaryHtml], async () => {
+watch([questionHtml, answerHtml, reasonHtml, summaryHtml, showAnswer, showAnalysis], async () => {
   await nextTick();
   typesetMath();
 }, { flush: 'post' });
@@ -81,14 +100,18 @@ onMounted(loadDetail);
 </script>
 
 <template>
-  <section>
-    <div class="page-title">
+  <section :class="{ 'focus-reading-mode': focusMode }">
+    <div class="page-title detail-page-title">
       <div>
         <h2>{{ item?.title || '错题详情' }}</h2>
         <p v-if="item">{{ item.subject }} / {{ item.chapter || '未分章节' }}</p>
         <p v-else>按科目、章节、错题逐级阅读。</p>
       </div>
       <div class="actions" v-if="item">
+        <button class="secondary" type="button" :disabled="!previousItem" @click="previousItem && openMistake(previousItem.id)">上一题</button>
+        <button class="secondary" type="button" :disabled="chapterItems.length < 2" @click="openRandom">随机一题</button>
+        <button class="secondary" type="button" :disabled="!nextItem" @click="nextItem && openMistake(nextItem.id)">下一题</button>
+        <button class="secondary" type="button" @click="focusMode = !focusMode">{{ focusMode ? '退出沉浸' : '沉浸阅读' }}</button>
         <RouterLink class="link-button secondary-link" :to="chapterRoute(currentChapter)">返回本章错题</RouterLink>
         <button class="primary" type="button" @click="editCurrent">编辑</button>
       </div>
@@ -98,7 +121,7 @@ onMounted(loadDetail);
     <p v-if="loading" class="muted">正在加载...</p>
 
     <div v-if="item" class="subject-layout">
-      <div class="chapter-tabs card" v-if="chapters.length">
+      <div class="chapter-tabs card detail-chapter-tabs" v-if="chapters.length && !focusMode">
         <RouterLink
           v-for="chapter in chapters"
           :key="chapter.chapter"
@@ -111,8 +134,8 @@ onMounted(loadDetail);
         </RouterLink>
       </div>
 
-      <div class="wiki-layout subject-main-layout">
-        <aside class="wiki-left card">
+      <div class="wiki-layout subject-main-layout" :class="{ 'focus-layout': focusMode }">
+        <aside v-if="!focusMode" class="wiki-left card">
           <h3>本章错题目录</h3>
           <p class="muted small-text">{{ currentSubject }} / {{ currentChapter }}</p>
           <div class="point-list-scroll" v-if="chapterItems.length">
@@ -141,7 +164,7 @@ onMounted(loadDetail);
           </div>
         </aside>
 
-        <article class="wiki-content card">
+        <article class="wiki-content card mistake-reading-card">
           <div class="knowledge-meta">
             <span class="badge">{{ item.subject }}</span>
             <span class="badge soft">{{ item.chapter || '未分章节' }}</span>
@@ -158,14 +181,23 @@ onMounted(loadDetail);
           <h2 id="mistake-question" class="detail-section-title">题目</h2>
           <div class="markdown-body wiki-markdown section-markdown" v-html="questionHtml"></div>
 
-          <h2 id="mistake-answer" class="detail-section-title">正确解法</h2>
-          <div class="markdown-body wiki-markdown section-markdown" v-html="answerHtml"></div>
+          <div class="reveal-actions">
+            <button class="primary" type="button" @click="showAnswer = !showAnswer">{{ showAnswer ? '隐藏正确解法' : '显示正确解法' }}</button>
+            <button class="secondary" type="button" @click="showAnalysis = !showAnalysis">{{ showAnalysis ? '隐藏错因与总结' : '显示错因与总结' }}</button>
+          </div>
 
-          <h2 id="mistake-reason" class="detail-section-title">错因</h2>
-          <div class="markdown-body wiki-markdown section-markdown" v-html="reasonHtml"></div>
+          <template v-if="showAnswer">
+            <h2 id="mistake-answer" class="detail-section-title">正确解法</h2>
+            <div class="markdown-body wiki-markdown section-markdown reveal-panel" v-html="answerHtml"></div>
+          </template>
 
-          <h2 id="mistake-summary" class="detail-section-title">总结</h2>
-          <div class="markdown-body wiki-markdown section-markdown" v-html="summaryHtml"></div>
+          <template v-if="showAnalysis">
+            <h2 id="mistake-reason" class="detail-section-title">错因</h2>
+            <div class="markdown-body wiki-markdown section-markdown reveal-panel" v-html="reasonHtml"></div>
+
+            <h2 id="mistake-summary" class="detail-section-title">总结</h2>
+            <div class="markdown-body wiki-markdown section-markdown reveal-panel" v-html="summaryHtml"></div>
+          </template>
 
           <h2 id="mistake-review" class="detail-section-title">复习信息</h2>
           <div class="review-info-grid">

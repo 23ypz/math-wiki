@@ -7,6 +7,7 @@ import KnowledgeDetail from './views/KnowledgeDetail.vue';
 import Mistakes from './views/Mistakes.vue';
 import MistakesSubject from './views/MistakesSubject.vue';
 import MistakeDetail from './views/MistakeDetail.vue';
+import MistakePrint from './views/MistakePrint.vue';
 import StudyLogs from './views/StudyLogs.vue';
 import Reviews from './views/Reviews.vue';
 import Search from './views/Search.vue';
@@ -25,6 +26,7 @@ const router = createRouter({
     { path: '/mistakes', component: Mistakes, meta: { auth: true } },
     { path: '/mistakes/subject/:subject', component: MistakesSubject, meta: { auth: true } },
     { path: '/mistakes/subject/:subject/chapter/:chapter', component: MistakesSubject, meta: { auth: true } },
+    { path: '/mistakes/print', component: MistakePrint, meta: { auth: true } },
     { path: '/mistakes/:id', component: MistakeDetail, meta: { auth: true } },
     { path: '/study-logs', component: StudyLogs, meta: { auth: true } },
     { path: '/reviews', component: Reviews, meta: { auth: true } },

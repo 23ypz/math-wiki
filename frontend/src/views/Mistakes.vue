@@ -12,6 +12,8 @@ const error = ref('');
 const draftMessage = ref('');
 const editingId = ref<number | null>(null);
 const customTag = ref('');
+const quickMode = ref(false);
+const saving = ref(false);
 const tagOptions = ['概念不清', '公式记错', '计算失误', '方法不会', '分类讨论遗漏', '条件看漏', '题意理解错误', '时间不足'];
 const filter = reactive({ q: '', subject: '', chapter: '', knowledge_point_id: '', status: '', difficulty: '', tag: '', overdue: false, sort: 'review_date' });
 const DRAFT_KEY = 'math-wiki-mistake-draft-v2';
@@ -146,9 +148,27 @@ async function editByIdFromQuery() {
   edit(target);
 }
 
-async function save() {
+function tomorrowDate() {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  return date.toISOString().slice(0, 10);
+}
+
+async function save(continueAdding = false) {
   error.value = '';
-  const payload = { ...form, tags: [...form.tags], knowledge_point_id: form.knowledge_point_id ? Number(form.knowledge_point_id) : null };
+  if (!form.title.trim()) {
+    error.value = '请填写错题标题。';
+    return;
+  }
+  saving.value = true;
+  const payload = {
+    ...form,
+    tags: [...form.tags],
+    knowledge_point_id: form.knowledge_point_id ? Number(form.knowledge_point_id) : null,
+    difficulty: quickMode.value && !editingId.value ? 3 : form.difficulty,
+    status: quickMode.value && !editingId.value ? '待复习' : form.status,
+    next_review_date: quickMode.value && !editingId.value && !form.next_review_date ? tomorrowDate() : form.next_review_date
+  };
   try {
     if (editingId.value) {
       await request(`/mistakes/${editingId.value}`, { method: 'PUT', body: JSON.stringify(payload) });
@@ -156,10 +176,20 @@ async function save() {
       await request('/mistakes', { method: 'POST', body: JSON.stringify(payload) });
     }
     clearDraft();
+    const keepSubject = form.subject;
+    const keepChapter = form.chapter;
     reset();
+    if (continueAdding) {
+      form.subject = keepSubject;
+      form.chapter = keepChapter;
+      quickMode.value = true;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
     await load();
   } catch (e) {
     error.value = e instanceof Error ? e.message : '保存失败';
+  } finally {
+    saving.value = false;
   }
 }
 
@@ -207,7 +237,11 @@ onMounted(async () => {
     <div class="page-title">
       <div>
         <h2>错题本</h2>
-        <p>支持知识点关联、错误标签、组合筛选和复习排序。</p>
+        <p>支持完整录入、快速录题、组合筛选和复习排序。</p>
+      </div>
+      <div class="actions">
+        <RouterLink class="link-button secondary-link" to="/mistakes/print">打印错题本</RouterLink>
+        <button type="button" :class="quickMode ? 'primary' : 'secondary'" @click="quickMode = !quickMode">{{ quickMode ? '退出快速模式' : '快速录题' }}</button>
       </div>
     </div>
 
@@ -215,21 +249,25 @@ onMounted(async () => {
 
     <div class="grid grid-2">
       <div class="card">
-        <div class="card-head"><h3>{{ editingId ? '编辑错题' : '新增错题' }}</h3><span v-if="draftMessage" class="muted small-text">{{ draftMessage }}</span></div>
-        <form class="form" @submit.prevent="save">
+        <div class="card-head"><div><h3>{{ editingId ? '编辑错题' : (quickMode ? '快速录题' : '新增错题') }}</h3><p v-if="quickMode && !editingId" class="muted small-text">只填写核心内容，其他字段以后再补充。</p></div><span v-if="draftMessage" class="muted small-text">{{ draftMessage }}</span></div>
+        <form class="form" @submit.prevent="save()">
           <div class="form-row"><label>标题<input v-model="form.title" placeholder="如 极限等价替换错误" /></label><label>科目<select v-model="form.subject"><option>高等数学</option><option>线性代数</option><option>概率论与数理统计</option></select></label></div>
-          <div class="form-row"><label>章节<input v-model="form.chapter" placeholder="如 极限" /></label><label>关联知识点<select v-model="form.knowledge_point_id"><option value="">不关联</option><option v-for="kp in filteredKnowledge" :key="kp.id" :value="kp.id">{{ kp.chapter }} / {{ kp.title }}</option></select></label></div>
-          <div class="form-row"><label>来源<input v-model="form.source" placeholder="如 660 / 880 / 真题" /></label><label>状态<select v-model="form.status"><option>待复习</option><option>复习中</option><option>已掌握</option></select></label></div>
-          <div class="form-row"><label>难度 1-5<input v-model.number="form.difficulty" type="number" min="1" max="5" /></label><label>下次复习日期<input v-model="form.next_review_date" type="date" /></label></div>
+          <div class="form-row"><label>章节<input v-model="form.chapter" placeholder="如 极限" /></label><label v-if="!quickMode || editingId">关联知识点<select v-model="form.knowledge_point_id"><option value="">不关联</option><option v-for="kp in filteredKnowledge" :key="kp.id" :value="kp.id">{{ kp.chapter }} / {{ kp.title }}</option></select></label></div>
+          <template v-if="!quickMode || editingId">
+            <div class="form-row"><label>来源<input v-model="form.source" placeholder="如 660 / 880 / 真题" /></label><label>状态<select v-model="form.status"><option>待复习</option><option>复习中</option><option>已掌握</option></select></label></div>
+            <div class="form-row"><label>难度 1-5<input v-model.number="form.difficulty" type="number" min="1" max="5" /></label><label>下次复习日期<input v-model="form.next_review_date" type="date" /></label></div>
+          </template>
+          <template v-if="!quickMode || editingId">
           <label>错误类型标签</label>
           <div class="tag-picker"><button v-for="tag in tagOptions" :key="tag" type="button" :class="{ active: form.tags.includes(tag) }" @click="toggleTag(tag)">{{ tag }}</button></div>
           <div class="tag-custom"><input v-model="customTag" placeholder="自定义标签" @keyup.enter.prevent="addCustomTag" /><button type="button" class="secondary" @click="addCustomTag">添加</button></div>
           <div v-if="form.tags.length" class="tag-list"><span v-for="tag in form.tags" :key="tag" class="tag-chip">{{ tag }} <button type="button" @click="toggleTag(tag)">×</button></span></div>
+          </template>
           <label>题目 Markdown<textarea v-model="form.question_text" class="large-textarea" /></label>
-          <label>正确解法 Markdown<textarea v-model="form.answer_text" class="large-textarea" /></label>
+          <label v-if="!quickMode || editingId">正确解法 Markdown<textarea v-model="form.answer_text" class="large-textarea" /></label>
           <label>错误原因<textarea v-model="form.wrong_reason" placeholder="具体写清楚为什么错" /></label>
-          <label>总结 Markdown<textarea v-model="form.summary" /></label>
-          <div class="actions"><button class="primary">保存</button><button class="secondary" type="button" @click="reset">清空</button></div>
+          <label v-if="!quickMode || editingId">总结 Markdown<textarea v-model="form.summary" /></label>
+          <div class="actions"><button class="primary" :disabled="saving">{{ saving ? '保存中...' : '保存' }}</button><button v-if="quickMode && !editingId" class="secondary" type="button" :disabled="saving" @click="save(true)">保存并继续</button><button class="secondary" type="button" @click="reset">清空</button></div>
         </form>
       </div>
 
@@ -239,9 +277,9 @@ onMounted(async () => {
           <p v-if="selectedKnowledge" class="tip">已关联：{{ selectedKnowledge.subject }} / {{ selectedKnowledge.chapter }} / {{ selectedKnowledge.title }}</p>
           <div v-if="form.tags.length" class="tag-list"><span v-for="tag in form.tags" :key="tag" class="tag-chip readonly">{{ tag }}</span></div>
           <h4>题目</h4><div class="markdown-body" v-html="questionPreview"></div>
-          <h4>正确解法</h4><div class="markdown-body" v-html="answerPreview"></div>
+          <template v-if="!quickMode || editingId"><h4>正确解法</h4><div class="markdown-body" v-html="answerPreview"></div></template>
           <h4>错误原因</h4><div class="markdown-body" v-html="wrongReasonPreview"></div>
-          <h4>总结</h4><div class="markdown-body" v-html="summaryPreview"></div>
+          <template v-if="!quickMode || editingId"><h4>总结</h4><div class="markdown-body" v-html="summaryPreview"></div></template>
         </div>
       </div>
     </div>
