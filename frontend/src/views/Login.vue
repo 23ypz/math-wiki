@@ -270,8 +270,8 @@ onBeforeUnmount(() => {
 
     <footer class="landing-footer">
       <div class="landing-brand compact">
-        <span class="landing-logo">研</span>
-        <span class="landing-brand-text"><strong>数学一 Wiki</strong><small>PERSONAL LEARNING SYSTEM</small></span>
+        <span class="landing-logo">数</span>
+        <span class="landing-brand-text"><strong>Math Wiki</strong><small>PERSONAL LEARNING SYSTEM</small></span>
       </div>
       <p>知识点 · 错题 · 复习 · Todo · 学习进度</p>
     </footer>
@@ -282,10 +282,10 @@ onBeforeUnmount(() => {
           <button class="modal-close" type="button" aria-label="关闭登录框" :disabled="loading" @click="closeLogin">×</button>
 
           <div class="modal-brand">
-            <span class="landing-logo">研</span>
+            <span class="landing-logo">数</span>
             <div>
               <span>欢迎回来</span>
-              <h2 id="login-title">登录数学一 Wiki</h2>
+              <h2 id="login-title">登录Math Wiki</h2>
             </div>
           </div>
           <p class="modal-copy">登录后继续维护你的知识点、错题与每日学习计划。</p>
