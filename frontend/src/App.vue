@@ -97,11 +97,11 @@ watch(mobileOpen, (open) => { document.body.style.overflow = open ? 'hidden' : '
         </nav>
         <div ref="knowledgeSection" class="sidebar-knowledge" :class="{ 'is-open': knowledgeOpen }">
           <button class="sidebar-toggle" :aria-expanded="knowledgeOpen" @click="toggleKnowledge"><span><b>▦</b><em>知识点科目</em></span><small>{{ knowledgeOpen ? '−' : '+' }}</small></button>
-          <div v-if="knowledgeOpen && !sidebarCollapsed" class="sidebar-subject-scroll"><RouterLink v-for="item in sidebarSubjects" :key="item.subject" :to="subjectPath(item.subject)" class="sidebar-subject-link"><span>{{ item.subject }}</span><small>{{ item.count }}</small></RouterLink></div>
+          <div v-if="knowledgeOpen" class="sidebar-subject-scroll"><RouterLink v-for="item in sidebarSubjects" :key="item.subject" :to="subjectPath(item.subject)" class="sidebar-subject-link"><span>{{ item.subject }}</span><small>{{ item.count }}</small></RouterLink></div>
         </div>
         <div ref="mistakesSection" class="sidebar-knowledge" :class="{ 'is-open': mistakesOpen }">
           <button class="sidebar-toggle" :aria-expanded="mistakesOpen" @click="toggleMistakes"><span><b>◇</b><em>错题分类</em></span><small>{{ mistakesOpen ? '−' : '+' }}</small></button>
-          <div v-if="mistakesOpen && !sidebarCollapsed" class="sidebar-subject-scroll"><RouterLink v-for="item in sidebarMistakeSubjects" :key="item.subject" :to="mistakeSubjectPath(item.subject)" class="sidebar-subject-link"><span>{{ item.subject }}</span><small>{{ item.count }}</small></RouterLink></div>
+          <div v-if="mistakesOpen" class="sidebar-subject-scroll"><RouterLink v-for="item in sidebarMistakeSubjects" :key="item.subject" :to="mistakeSubjectPath(item.subject)" class="sidebar-subject-link"><span>{{ item.subject }}</span><small>{{ item.count }}</small></RouterLink></div>
         </div>
       </div>
       <div class="sidebar-bottom">
