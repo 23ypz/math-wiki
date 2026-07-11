@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router';
 import { isGuest, request } from '../api';
 import { renderMarkdown, typesetMath } from '../markdown';
 import type { KnowledgePoint, Mistake } from '../types';
+import ImageUploader from '../components/ImageUploader.vue';
 
 const guest = isGuest();
 const route = useRoute();
@@ -252,6 +253,11 @@ function loadGuestFrameworkExample() {
   });
 }
 
+
+function insertMistakeImage(field: 'question_text' | 'answer_text' | 'wrong_reason' | 'summary', payload: { markdown: string }) {
+  form[field] = `${form[field] || ''}\n\n${payload.markdown}\n`;
+}
+
 onMounted(async () => {
   await Promise.all([loadKnowledge(), load()]);
   loadGuestFrameworkExample();
@@ -295,9 +301,13 @@ onMounted(async () => {
           <div v-if="form.tags.length" class="tag-list"><span v-for="tag in form.tags" :key="tag" class="tag-chip">{{ tag }} <button type="button" @click="toggleTag(tag)">×</button></span></div>
           </template>
           <label>题目 Markdown<textarea v-model="form.question_text" class="large-textarea" /></label>
-          <label v-if="!quickMode || editingId">正确解法 Markdown<textarea v-model="form.answer_text" class="large-textarea" /></label>
+          <ImageUploader category="mistake" label="上传题目图片" :disabled="guest" @uploaded="insertMistakeImage('question_text', $event)" />
+          <template v-if="!quickMode || editingId"><label>正确解法 Markdown<textarea v-model="form.answer_text" class="large-textarea" /></label>
+          <ImageUploader category="mistake" label="上传题解图片" :disabled="guest" @uploaded="insertMistakeImage('answer_text', $event)" /></template>
           <label>错误原因<textarea v-model="form.wrong_reason" placeholder="具体写清楚为什么错" /></label>
-          <label v-if="!quickMode || editingId">总结 Markdown<textarea v-model="form.summary" /></label>
+          <ImageUploader category="mistake" label="上传错因图片" :disabled="guest" @uploaded="insertMistakeImage('wrong_reason', $event)" />
+          <template v-if="!quickMode || editingId"><label>总结 Markdown<textarea v-model="form.summary" /></label>
+          <ImageUploader category="mistake" label="上传总结图片" :disabled="guest" @uploaded="insertMistakeImage('summary', $event)" /></template>
           <div class="actions"><button class="primary" :disabled="saving || guest">{{ guest ? '游客模式不可保存' : (saving ? '保存中...' : '保存') }}</button><button v-if="quickMode && !editingId && !guest" class="secondary" type="button" :disabled="saving" @click="save(true)">保存并继续</button><button class="secondary" type="button" :disabled="guest" @click="reset">清空</button></div>
           </fieldset>
         </form>

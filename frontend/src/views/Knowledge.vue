@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { isGuest, request } from '../api';
 import { renderMarkdown, stripMarkdown, typesetMath } from '../markdown';
 import type { KnowledgePoint } from '../types';
+import ImageUploader from '../components/ImageUploader.vue';
 
 const guest = isGuest();
 const router = useRouter();
@@ -95,6 +96,13 @@ async function loadOneForEdit(id: number) {
   } catch {
     // 忽略，保持列表页可用。
   }
+}
+
+
+function insertKnowledgeImage(payload: { markdown: string }) {
+  const block = `\n\n${payload.markdown}\n`;
+  form.content_md = `${form.content_md || ''}${block}`;
+  showPreview.value = true;
 }
 
 async function save() {
@@ -192,6 +200,7 @@ onMounted(async () => {
 - 常用公式
 - 典型题型
 - 易错点" /></label>
+          <ImageUploader category="knowledge" label="上传知识点图片" :disabled="guest" @uploaded="insertKnowledgeImage" />
           <div class="actions">
             <button class="primary" :disabled="guest">{{ guest ? '游客模式不可保存' : '保存' }}</button>
             <button class="secondary" type="button" :disabled="guest" @click="reset">清空</button>

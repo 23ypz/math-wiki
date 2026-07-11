@@ -1590,3 +1590,62 @@ body.landing-active .app-shell {
     page-break-after: avoid;
   }
 }
+
+/* Image upload and Markdown media */
+.image-uploader { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:-2px 0 12px; }
+.image-upload-button { min-width:132px; }
+.markdown-body img { display:block; max-width:min(100%, 900px); max-height:720px; height:auto; margin:16px auto; border-radius:14px; border:1px solid var(--border); box-shadow:0 8px 24px rgba(15,23,42,.08); object-fit:contain; background:#fff; }
+.avatar-upload-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px; border:1px dashed var(--border); border-radius:14px; background:var(--surface-soft); }
+.profile-avatar { overflow:hidden; }
+.profile-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
+@media (max-width:700px) { .image-uploader { align-items:flex-start; flex-direction:column; } .markdown-body img { max-height:520px; } }
+@media print { .image-uploader { display:none !important; } .markdown-body img { max-width:95% !important; max-height:620px; box-shadow:none; break-inside:avoid; page-break-inside:avoid; } }
+.mini-avatar { overflow:hidden; }
+.mini-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
+
+/* Markdown image rendering */
+.markdown-image {
+  margin: 18px auto;
+  text-align: center;
+}
+
+.markdown-image img {
+  display: block;
+  max-width: min(100%, 900px);
+  max-height: 720px;
+  width: auto;
+  height: auto;
+  margin: 0 auto;
+  object-fit: contain;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  background: #fff;
+}
+
+.markdown-image-caption {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .markdown-image img {
+    max-height: 520px;
+  }
+}
+
+@media print {
+  .markdown-image,
+  .markdown-image img {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .markdown-image img {
+    max-width: 95% !important;
+    max-height: 620px;
+    box-shadow: none;
+  }
+}

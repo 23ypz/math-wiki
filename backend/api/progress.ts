@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { exec, rows } from '../src/db.js';
 import { requireUser } from '../src/auth.js';
 import { applyCors, asInt, asString, badRequest, body, created, methodNotAllowed, notFound, ok, one, serverError } from '../src/http.js';
+import { uploadDataImage } from '../src/storage.js';
 
 function resource(req: VercelRequest) {
   return one(req.query.resource) || '';
@@ -13,20 +14,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!user) return;
 
   const kind = resource(req);
-  if (!['exams', 'goals', 'todos', 'profile'].includes(kind)) return badRequest(res, 'resource must be exams, goals, todos or profile.');
+  if (!['exams', 'goals', 'todos', 'profile', 'upload'].includes(kind)) return badRequest(res, 'resource must be exams, goals, todos, profile or upload.');
 
   try {
+    if (kind === 'upload') {
+      if (req.method !== 'POST') return methodNotAllowed(res);
+      const data = body<Record<string, unknown>>(req);
+      const dataUrl = asString(data.data_url);
+      if (!dataUrl) return badRequest(res, 'data_url is required.');
+      const result = await uploadDataImage({
+        dataUrl,
+        filename: asString(data.filename, `${Date.now()}.webp`),
+        category: asString(data.category, 'misc'),
+        userId: user.userId
+      });
+      return created(res, result);
+    }
+
     if (req.method === 'GET') {
       if (kind === 'profile') {
         const items = await rows(
-          `SELECT id, nickname, avatar_style, signature, target_school, target_major, exam_year,
+          `SELECT id, nickname, avatar_style, avatar_url, signature, target_school, target_major, exam_year,
                   preparation_start_date, exam_date, daily_target_minutes, math_target_score,
                   created_at, updated_at
            FROM user_profile WHERE user_id = ? LIMIT 1`,
           [user.userId]
         );
         const item = items[0] || {
-          nickname: 'Math Seeker', avatar_style: 'blue', signature: '稳扎稳打，每天进步一点。',
+          nickname: 'Math Seeker', avatar_style: 'blue', avatar_url: '', signature: '稳扎稳打，每天进步一点。',
           target_school: '', target_major: '', exam_year: null, preparation_start_date: null,
           exam_date: null, daily_target_minutes: 300, math_target_score: 120
         };
@@ -124,17 +139,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (kind === 'profile' && req.method === 'PUT') {
       const values = [
-        user.userId, asString(data.nickname, 'Math Seeker'), asString(data.avatar_style, 'blue'),
+        user.userId, asString(data.nickname, 'Math Seeker'), asString(data.avatar_style, 'blue'), asString(data.avatar_url),
         asString(data.signature), asString(data.target_school), asString(data.target_major),
         asInt(data.exam_year), asString(data.preparation_start_date), asString(data.exam_date),
         asInt(data.daily_target_minutes) || 300, Number(data.math_target_score) || 120
       ];
       await exec(
         `INSERT INTO user_profile
-         (user_id, nickname, avatar_style, signature, target_school, target_major, exam_year,
+         (user_id, nickname, avatar_style, avatar_url, signature, target_school, target_major, exam_year,
           preparation_start_date, exam_date, daily_target_minutes, math_target_score)
-         VALUES (?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''), NULLIF(?, ''), ?, ?)
-         ON DUPLICATE KEY UPDATE nickname = VALUES(nickname), avatar_style = VALUES(avatar_style),
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''), NULLIF(?, ''), ?, ?)
+         ON DUPLICATE KEY UPDATE nickname = VALUES(nickname), avatar_style = VALUES(avatar_style), avatar_url = VALUES(avatar_url),
           signature = VALUES(signature), target_school = VALUES(target_school), target_major = VALUES(target_major),
           exam_year = VALUES(exam_year), preparation_start_date = VALUES(preparation_start_date),
           exam_date = VALUES(exam_date), daily_target_minutes = VALUES(daily_target_minutes),

@@ -123,6 +123,7 @@ CREATE TABLE IF NOT EXISTS user_profile (
   user_id VARCHAR(64) NOT NULL UNIQUE,
   nickname VARCHAR(100) DEFAULT 'Math Seeker',
   avatar_style VARCHAR(50) DEFAULT 'blue',
+  avatar_url TEXT,
   signature VARCHAR(255),
   target_school VARCHAR(255),
   target_major VARCHAR(255),

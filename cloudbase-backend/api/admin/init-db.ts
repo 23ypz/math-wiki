@@ -128,6 +128,7 @@ const statements = [
     user_id VARCHAR(64) NOT NULL UNIQUE,
     nickname VARCHAR(100) DEFAULT 'Math Seeker',
     avatar_style VARCHAR(50) DEFAULT 'blue',
+    avatar_url TEXT,
     signature VARCHAR(255),
     target_school VARCHAR(255),
     target_major VARCHAR(255),
@@ -138,7 +139,8 @@ const statements = [
     math_target_score DECIMAL(6,2) DEFAULT 120,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-  )`
+  )`,
+  `ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS avatar_url TEXT`
 ];
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

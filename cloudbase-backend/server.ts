@@ -20,8 +20,8 @@ const app = express();
 
 app.disable('x-powered-by');
 app.set('trust proxy', true);
-app.use(express.json({ limit: '2mb' }));
-app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+app.use(express.json({ limit: '8mb' }));
+app.use(express.urlencoded({ extended: true, limit: '8mb' }));
 
 function adapt(handler: VercelHandler) {
   return async (req: Request, res: Response, next: NextFunction) => {

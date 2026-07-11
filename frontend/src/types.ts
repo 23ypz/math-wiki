@@ -104,6 +104,7 @@ export type UserProfile = {
   id?: number;
   nickname: string;
   avatar_style: string;
+  avatar_url?: string;
   signature: string;
   target_school: string;
   target_major: string;

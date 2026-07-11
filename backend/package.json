@@ -8,6 +8,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@cloudbase/node-sdk": "^3.18.3",
     "@vercel/node": "latest",
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.11.5"

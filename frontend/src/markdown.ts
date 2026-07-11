@@ -36,7 +36,27 @@ export function stripMarkdown(source?: string | null, maxLength = 80) {
 }
 
 function renderInline(value: string) {
-  let html = escapeHtml(value);
+  // Extract image markdown before escaping or processing normal links.
+  // This avoids ![alt](url) being partially consumed as ! + [alt](url).
+  const imageStore: string[] = [];
+  let prepared = value.replace(
+    /!\[([^\]]*)\]\(\s*(<?https?:\/\/[^\s)>]+>?)\s*(?:["']([^"']*)["'])?\s*\)/g,
+    (_match, rawAlt: string, rawSrc: string, rawTitle?: string) => {
+      const src = rawSrc.replace(/^<|>$/g, '');
+      const alt = rawAlt.trim() || 'Markdown 图片';
+      const title = rawTitle?.trim();
+      const token = `@@IMAGE_${imageStore.length}@@`;
+      const caption = rawAlt.trim()
+        ? `<span class="markdown-image-caption">${escapeHtml(rawAlt.trim())}</span>`
+        : '';
+      imageStore.push(
+        `<span class="markdown-image"><img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}"${title ? ` title="${escapeHtml(title)}"` : ''} loading="lazy" decoding="async">${caption}</span>`
+      );
+      return token;
+    }
+  );
+
+  let html = escapeHtml(prepared);
 
   // Inline code first, so markdown syntax inside code is not interpreted.
   const codeStore: string[] = [];
@@ -46,8 +66,11 @@ function renderInline(value: string) {
     return token;
   });
 
-  // Links: [text](https://example.com)
-  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+  // Links: [text](https://example.com). Images have already been replaced by tokens.
+  html = html.replace(/\[([^\]]+)\]\(\s*(<?https?:\/\/[^\s)>]+>?)\s*(?:["']([^"']*)["'])?\s*\)/g, (_match, text, rawHref, title) => {
+    const href = String(rawHref).replace(/^<|>$/g, '');
+    return `<a href="${href}" target="_blank" rel="noopener noreferrer"${title ? ` title="${title}"` : ''}>${text}</a>`;
+  });
 
   // MathJax inline math. Do this before emphasis so * inside TeX is not touched.
   html = html.replace(/\$(?!\$)([^$\n]+?)\$/g, '<span class="math-inline">\\($1\\)</span>');
@@ -60,6 +83,9 @@ function renderInline(value: string) {
 
   codeStore.forEach((code, index) => {
     html = html.replace(`@@CODE_${index}@@`, code);
+  });
+  imageStore.forEach((image, index) => {
+    html = html.replace(`@@IMAGE_${index}@@`, image);
   });
 
   return html;

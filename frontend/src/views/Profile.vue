@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import { isGuest, request } from '../api';
 import { showToast } from '../toast';
 import type { ExamScore, KnowledgePoint, Mistake, ReviewRecord, StudyLog, TodoItem, UserProfile } from '../types';
+import ImageUploader from '../components/ImageUploader.vue';
 
 const guest = isGuest();
 const loading = ref(true);
@@ -10,7 +11,7 @@ const saving = ref(false);
 const error = ref('');
 const stats = ref({ studyMinutes: 0, knowledge: 0, mistakes: 0, reviews: 0, completedTodos: 0, highestScore: 0 });
 const form = ref<UserProfile>({
-  nickname: 'Math Seeker', avatar_style: 'blue', signature: '稳扎稳打，每天进步一点。',
+  nickname: 'Math Seeker', avatar_style: 'blue', avatar_url: '', signature: '稳扎稳打，每天进步一点。',
   target_school: '', target_major: '', exam_year: new Date().getFullYear() + 1,
   preparation_start_date: '', exam_date: '', daily_target_minutes: 300, math_target_score: 120
 });
@@ -56,6 +57,16 @@ async function load() {
   finally { loading.value = false; }
 }
 
+
+function setAvatar(payload: { url: string }) {
+  form.value.avatar_url = payload.url;
+  showToast('头像已上传，请点击保存资料');
+}
+
+function removeAvatar() {
+  form.value.avatar_url = '';
+}
+
 async function save() {
   saving.value = true; error.value = '';
   try {
@@ -78,7 +89,7 @@ onMounted(load);
     <div v-if="loading" class="card skeleton-card">正在加载个人资料…</div>
     <template v-else>
       <div class="profile-hero card">
-        <div class="profile-avatar" :class="`avatar-${form.avatar_style}`">{{ initials }}</div>
+        <div class="profile-avatar" :class="`avatar-${form.avatar_style}`"><img v-if="form.avatar_url" :src="form.avatar_url" alt="个人头像"><span v-else>{{ initials }}</span></div>
         <div class="profile-hero-copy">
           <span class="badge">{{ form.exam_year || '目标' }} 考研</span>
           <h3>{{ form.nickname || 'Math Seeker' }}</h3>
@@ -98,6 +109,7 @@ onMounted(load);
         <form v-if="!guest" class="card form profile-form" @submit.prevent="save">
           <div class="card-head"><div><span class="eyebrow">PROFILE</span><h3>基本信息</h3></div></div>
           <div class="form-row"><label>昵称<input v-model="form.nickname" maxlength="100" /></label><label>头像风格<select v-model="form.avatar_style"><option v-for="item in avatarStyles" :key="item.value" :value="item.value">{{ item.label }}</option></select></label></div>
+          <div class="avatar-upload-row"><ImageUploader category="avatar" label="上传个人头像" avatar @uploaded="setAvatar" /><button v-if="form.avatar_url" type="button" class="secondary" @click="removeAvatar">恢复文字头像</button></div>
           <label>个性签名<input v-model="form.signature" maxlength="255" placeholder="稳扎稳打，每天进步一点。" /></label>
           <div class="form-row"><label>目标院校<input v-model="form.target_school" /></label><label>目标专业<input v-model="form.target_major" /></label></div>
           <div class="form-row"><label>考试年份<input v-model.number="form.exam_year" type="number" min="2026" max="2100" /></label><label>数学目标分数<input v-model.number="form.math_target_score" type="number" min="0" max="150" step="0.5" /></label></div>
