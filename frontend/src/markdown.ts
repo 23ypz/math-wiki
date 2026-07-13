@@ -277,7 +277,6 @@ export function renderMarkdown(source?: string | null): string {
   const html: string[] = [];
   let inUl = false;
   let inOl = false;
-  let inBlockQuote = false;
   let headingIndex = 0;
 
   const closeUl = () => {
@@ -292,16 +291,9 @@ export function renderMarkdown(source?: string | null): string {
       inOl = false;
     }
   };
-  const closeBlockQuote = () => {
-    if (inBlockQuote) {
-      html.push('</blockquote>');
-      inBlockQuote = false;
-    }
-  };
   const closeBlocks = () => {
     closeUl();
     closeOl();
-    closeBlockQuote();
   };
 
   let i = 0;
@@ -312,6 +304,31 @@ export function renderMarkdown(source?: string | null): string {
     if (!line) {
       closeBlocks();
       i += 1;
+      continue;
+    }
+
+    // Collect the complete block quote before rendering it. Rendering each
+    // quoted line independently breaks blank quote lines (`>`) and prevents
+    // nested block constructs such as display math, lists, tables and code
+    // fences from being recognized.
+    if (/^>\s?/.test(line)) {
+      closeBlocks();
+
+      const quoteLines: string[] = [];
+
+      while (i < lines.length) {
+        const quoteMatch = lines[i].match(/^\s*>\s?(.*)$/);
+        if (!quoteMatch) break;
+
+        // Strip exactly one quote marker. A nested quote such as `>> text`
+        // keeps the second marker and is handled by the recursive render.
+        quoteLines.push(quoteMatch[1]);
+        i += 1;
+      }
+
+      const quoteSource = quoteLines.join('\n');
+      const quoteHtml = quoteSource.trim() ? renderMarkdown(quoteSource) : '';
+      html.push(`<blockquote>${quoteHtml}</blockquote>`);
       continue;
     }
 
@@ -389,23 +406,9 @@ export function renderMarkdown(source?: string | null): string {
       continue;
     }
 
-    const quote = line.match(/^>\s?(.+)$/);
-    if (quote) {
-      closeUl();
-      closeOl();
-      if (!inBlockQuote) {
-        html.push('<blockquote>');
-        inBlockQuote = true;
-      }
-      html.push(`<p>${renderInline(quote[1])}</p>`);
-      i += 1;
-      continue;
-    }
-
     const checkItem = line.match(/^[-*+]\s+\[([ xX])\]\s+(.+)$/);
     if (checkItem) {
       closeOl();
-      closeBlockQuote();
       if (!inUl) {
         html.push('<ul class="task-list">');
         inUl = true;
@@ -419,7 +422,6 @@ export function renderMarkdown(source?: string | null): string {
     const listItem = line.match(/^[-*+]\s+(.+)$/);
     if (listItem) {
       closeOl();
-      closeBlockQuote();
       if (!inUl) {
         html.push('<ul>');
         inUl = true;
@@ -432,7 +434,6 @@ export function renderMarkdown(source?: string | null): string {
     const orderedItem = line.match(/^\d+\.\s+(.+)$/);
     if (orderedItem) {
       closeUl();
-      closeBlockQuote();
       if (!inOl) {
         html.push('<ol>');
         inOl = true;
