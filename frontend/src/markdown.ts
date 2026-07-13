@@ -13,9 +13,19 @@ export type MarkdownHeading = {
   text: string;
 };
 
+/**
+ * Normalize only line endings and accidentally double-escaped MathJax
+ * delimiters. Do not decode every literal "\\n": doing so corrupts LaTeX
+ * commands such as \\ne and \\neq.
+ */
 function normalizeMarkdownSource(source?: string | null) {
-  // 兼容用户把示例里的 \n 直接复制进输入框的情况。
-  return (source || '').replace(/\\n/g, '\n').trim();
+  return (source || '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/\\\\\(/g, '\\(')
+    .replace(/\\\\\)/g, '\\)')
+    .replace(/\\\\\[/g, '\\[')
+    .replace(/\\\\\]/g, '\\]')
+    .trim();
 }
 
 function plainText(value: string) {
@@ -35,17 +45,28 @@ export function stripMarkdown(source?: string | null, maxLength = 80) {
   return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
 }
 
+function normalizeTexFormula(value: string) {
+  // Some copied Markdown contains JSON-style double escaping (for example
+  // \\Rightarrow). Inside a math region those should be ordinary TeX commands.
+  return value.replace(/\\\\(?=[a-zA-Z])/g, '\\');
+}
+
 function renderInline(value: string) {
-  // Extract image markdown before escaping or processing normal links.
-  // This avoids ![alt](url) being partially consumed as ! + [alt](url).
   const imageStore: string[] = [];
-  let prepared = value.replace(
+  const codeStore: string[] = [];
+  const mathStore: string[] = [];
+
+  let prepared = normalizeMarkdownSource(value);
+
+  // Images are extracted before normal links so ![alt](url) is not partly
+  // consumed as a normal link.
+  prepared = prepared.replace(
     /!\[([^\]]*)\]\(\s*(<?https?:\/\/[^\s)>]+>?)\s*(?:["']([^"']*)["'])?\s*\)/g,
     (_match, rawAlt: string, rawSrc: string, rawTitle?: string) => {
       const src = rawSrc.replace(/^<|>$/g, '');
       const alt = rawAlt.trim() || 'Markdown 图片';
       const title = rawTitle?.trim();
-      const token = `@@IMAGE_${imageStore.length}@@`;
+      const token = `@@IMAGE${imageStore.length}@@`;
       const caption = rawAlt.trim()
         ? `<span class="markdown-image-caption">${escapeHtml(rawAlt.trim())}</span>`
         : '';
@@ -56,24 +77,34 @@ function renderInline(value: string) {
     }
   );
 
-  let html = escapeHtml(prepared);
-
-  // Inline code first, so markdown syntax inside code is not interpreted.
-  const codeStore: string[] = [];
-  html = html.replace(/`([^`]+)`/g, (_match, code) => {
-    const token = `@@CODE_${codeStore.length}@@`;
-    codeStore.push(`<code>${code}</code>`);
+  // Inline code is protected before math and emphasis parsing.
+  prepared = prepared.replace(/`([^`]+)`/g, (_match, code: string) => {
+    const token = `@@CODE${codeStore.length}@@`;
+    codeStore.push(`<code>${escapeHtml(code)}</code>`);
     return token;
   });
 
-  // Links: [text](https://example.com). Images have already been replaced by tokens.
-  html = html.replace(/\[([^\]]+)\]\(\s*(<?https?:\/\/[^\s)>]+>?)\s*(?:["']([^"']*)["'])?\s*\)/g, (_match, text, rawHref, title) => {
-    const href = String(rawHref).replace(/^<|>$/g, '');
-    return `<a href="${href}" target="_blank" rel="noopener noreferrer"${title ? ` title="${title}"` : ''}>${text}</a>`;
-  });
+  const saveInlineMath = (_match: string, formula: string) => {
+    const token = `@@MATH${mathStore.length}@@`;
+    mathStore.push(`<span class="math-inline">\\(${escapeHtml(normalizeTexFormula(formula.trim()))}\\)</span>`);
+    return token;
+  };
 
-  // MathJax inline math. Do this before emphasis so * inside TeX is not touched.
-  html = html.replace(/\$(?!\$)([^$\n]+?)\$/g, '<span class="math-inline">\\($1\\)</span>');
+  // Accept both common inline-math syntaxes. Explicitly tokenizing \(...\)
+  // also makes old records containing those delimiters render consistently.
+  prepared = prepared.replace(/\\\(([^\n]*?)\\\)/g, saveInlineMath);
+  prepared = prepared.replace(/\$(?!\$)([^$\n]+?)\$/g, saveInlineMath);
+
+  let html = escapeHtml(prepared);
+
+  // Links: [text](https://example.com). Images have already become tokens.
+  html = html.replace(
+    /\[([^\]]+)\]\(\s*(<?https?:\/\/[^\s)>]+>?)\s*(?:["']([^"']*)["'])?\s*\)/g,
+    (_match, text: string, rawHref: string, title?: string) => {
+      const href = String(rawHref).replace(/^<|>$/g, '');
+      return `<a href="${href}" target="_blank" rel="noopener noreferrer"${title ? ` title="${title}"` : ''}>${text}</a>`;
+    }
+  );
 
   html = html
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
@@ -82,22 +113,92 @@ function renderInline(value: string) {
     .replace(/_([^_]+)_/g, '<em>$1</em>');
 
   codeStore.forEach((code, index) => {
-    html = html.replace(`@@CODE_${index}@@`, code);
+    html = html.replace(`@@CODE${index}@@`, code);
+  });
+  mathStore.forEach((math, index) => {
+    html = html.replace(`@@MATH${index}@@`, math);
   });
   imageStore.forEach((image, index) => {
-    html = html.replace(`@@IMAGE_${index}@@`, image);
+    html = html.replace(`@@IMAGE${index}@@`, image);
   });
 
   return html;
 }
 
+/**
+ * Split a Markdown table row without treating pipes inside inline code or
+ * inline math as column separators. This allows formulas such as $|x|$.
+ */
+function parseTableRow(row: string) {
+  let value = row.trim();
+  if (value.startsWith('|')) value = value.slice(1);
+  if (value.endsWith('|') && !value.endsWith('\\|')) value = value.slice(0, -1);
+
+  const cells: string[] = [];
+  let current = '';
+  let inCode = false;
+  let inDollarMath = false;
+  let inParenMath = false;
+
+  for (let i = 0; i < value.length; i += 1) {
+    const char = value[i];
+    const next = value[i + 1];
+    const previous = value[i - 1];
+
+    if (char === '`' && previous !== '\\') {
+      inCode = !inCode;
+      current += char;
+      continue;
+    }
+
+    if (!inCode && char === '\\' && next === '(' && !inDollarMath) {
+      inParenMath = true;
+      current += '\\(';
+      i += 1;
+      continue;
+    }
+
+    if (!inCode && char === '\\' && next === ')' && inParenMath) {
+      inParenMath = false;
+      current += '\\)';
+      i += 1;
+      continue;
+    }
+
+    if (!inCode && !inParenMath && char === '$' && previous !== '\\') {
+      inDollarMath = !inDollarMath;
+      current += char;
+      continue;
+    }
+
+    if (char === '|' && previous !== '\\' && !inCode && !inDollarMath && !inParenMath) {
+      cells.push(current.trim());
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  cells.push(current.trim());
+  return cells;
+}
+
 function renderTable(rows: string[]) {
-  const parseRow = (row: string) => row.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((cell) => cell.trim());
-  const header = parseRow(rows[0]);
-  const bodyRows = rows.slice(2).map(parseRow);
+  const header = parseTableRow(rows[0]);
+  const bodyRows = rows.slice(2).map(parseTableRow);
+  const columnCount = header.length;
+
+  // Keep malformed rows from breaking the whole table layout. Missing cells
+  // are padded and surplus text is merged into the last cell.
+  const normalizeRow = (row: string[]) => {
+    if (row.length === columnCount) return row;
+    if (row.length < columnCount) return [...row, ...Array(columnCount - row.length).fill('')];
+    return [...row.slice(0, columnCount - 1), row.slice(columnCount - 1).join(' | ')];
+  };
 
   const thead = `<thead><tr>${header.map((cell) => `<th>${renderInline(cell)}</th>`).join('')}</tr></thead>`;
-  const tbody = `<tbody>${bodyRows.map((row) => `<tr>${row.map((cell) => `<td>${renderInline(cell)}</td>`).join('')}</tr>`).join('')}</tbody>`;
+  const tbody = `<tbody>${bodyRows.map((row) => `<tr>${normalizeRow(row).map((cell) => `<td>${renderInline(cell)}</td>`).join('')}</tr>`).join('')}</tbody>`;
   return `<div class="table-wrap"><table>${thead}${tbody}</table></div>`;
 }
 
@@ -112,16 +213,30 @@ function isTableStart(lines: string[], index: number) {
 }
 
 let mathTimer: number | undefined;
+let mathRetryTimer: number | undefined;
 
 export function typesetMath() {
   if (typeof window === 'undefined') return;
   window.clearTimeout(mathTimer);
-  mathTimer = window.setTimeout(() => {
+  window.clearTimeout(mathRetryTimer);
+
+  const run = (attempt = 0) => {
     const mathJax = (window as any).MathJax;
-    if (mathJax?.typesetPromise) {
-      mathJax.typesetPromise().catch(() => undefined);
+    if (!mathJax?.typesetPromise) {
+      // MathJax is loaded from a CDN. On a slow connection the first Vue
+      // render can happen before the script is ready, so retry briefly.
+      if (attempt < 20) {
+        mathRetryTimer = window.setTimeout(() => run(attempt + 1), 150);
+      }
+      return;
     }
-  }, 80);
+
+    Promise.resolve(mathJax.startup?.promise)
+      .then(() => mathJax.typesetPromise())
+      .catch(() => undefined);
+  };
+
+  mathTimer = window.setTimeout(() => run(), 80);
 }
 
 export function extractHeadings(source?: string | null): MarkdownHeading[] {
@@ -221,32 +336,39 @@ export function renderMarkdown(source?: string | null): string {
       continue;
     }
 
-    if (line === '$$') {
+    if (line === '$$' || line === '\\[') {
       closeBlocks();
+      const closingDelimiter = line === '$$' ? '$$' : '\\]';
       const formula: string[] = [];
       i += 1;
-      while (i < lines.length && lines[i].trim() !== '$$') {
+      while (i < lines.length && lines[i].trim() !== closingDelimiter) {
         formula.push(lines[i]);
         i += 1;
       }
       if (i < lines.length) i += 1;
-      html.push(`<div class="math-block">\\[${escapeHtml(formula.join('\n'))}\\]</div>`);
+      html.push(`<div class="math-block">\\[${escapeHtml(normalizeTexFormula(formula.join('\n')))}\\]</div>`);
       continue;
     }
 
     if (line.startsWith('$$') && line.endsWith('$$') && line.length > 4) {
       closeBlocks();
       const formula = line.slice(2, -2).trim();
-      html.push(`<div class="math-block">\\[${escapeHtml(formula)}\\]</div>`);
+      html.push(`<div class="math-block">\\[${escapeHtml(normalizeTexFormula(formula))}\\]</div>`);
+      i += 1;
+      continue;
+    }
+
+    if (line.startsWith('\\[') && line.endsWith('\\]') && line.length > 4) {
+      closeBlocks();
+      const formula = line.slice(2, -2).trim();
+      html.push(`<div class="math-block">\\[${escapeHtml(normalizeTexFormula(formula))}\\]</div>`);
       i += 1;
       continue;
     }
 
     if (isTableStart(lines, i)) {
       closeBlocks();
-      const tableRows: string[] = [];
-      tableRows.push(lines[i]);
-      tableRows.push(lines[i + 1]);
+      const tableRows: string[] = [lines[i], lines[i + 1]];
       i += 2;
       while (i < lines.length && lines[i].trim().includes('|') && lines[i].trim()) {
         tableRows.push(lines[i]);
